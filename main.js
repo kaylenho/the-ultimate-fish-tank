@@ -32,18 +32,20 @@ scene.add(fish);
 const material = new THREE.MeshPhongMaterial({ color: 0x80FFFF, shininess: 40 });
 
 // Fish Head - More Rounded and Fish-Like
-const headGeometry = new THREE.SphereGeometry(1.2, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.75); // 3/4 sphere for smooth transition
-headGeometry.scale(1.5, 1.2, 1.5); // Make it slightly oval
+const headGeometry = new THREE.SphereGeometry(1.2, 20, 16, 0, Math.PI * 2, 0, Math.PI/2); // 3/4 sphere for smooth transition
+headGeometry.scale(.75, 3,1.5); // Make it slightly oval
 const fishHead = new THREE.Mesh(headGeometry, material);
 fishHead.rotation.x = Math.PI / 2;
 fishHead.position.set(0, 0, 2.5); // Pushed slightly into the body
 fish.add(fishHead);
 
 // Fish Body - Ellipsoid Shape (With Clipped Front)
-const bodyGeometry = new THREE.SphereGeometry(1.2, 20, 16);
-bodyGeometry.scale(1.5, 1, 3.5); // Long, oval shape
+const bodyGeometry = new THREE.SphereGeometry(1.2, 20, 16, 0, Math.PI * 2, 0, Math.PI/2); // Half-sphere
+bodyGeometry.scale(.75, 5,1.5); // Make it slightly oval
 const fishBody = new THREE.Mesh(bodyGeometry, material);
-fishBody.position.set(0, 0, -0.25); // Shifted slightly to avoid overlap
+fishBody.rotation.x = Math.PI / 2;
+fishBody.rotation.z = Math.PI;
+fishBody.position.set(0, 0, 2.5); // Shifted slightly to avoid overlap
 fish.add(fishBody);
 
 // Fish Tail - Fan-Like Shape
@@ -52,7 +54,7 @@ const tailHeight = 2.5;
 const tailGeometry = new THREE.ConeGeometry(tailRadius, tailHeight, 6);
 const fishTail = new THREE.Mesh(tailGeometry, material);
 fishTail.rotation.x = Math.PI / 2;
-fishTail.position.set(0, 0, -4.8);
+fishTail.position.set(0, 0, -4);
 fish.add(fishTail);
 
 
