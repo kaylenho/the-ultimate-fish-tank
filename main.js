@@ -97,9 +97,33 @@ fish.position.set(0, -1, 0);
 
 
 // Animation Loop
+const clock = new THREE.Clock();
+
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
+
+    const time = clock.getElapsedTime();
+    const radius = 10;
+    const dt = 0.01; // time for the look-ahead
+
+    
+    const verticalAmplitude = 2; // How high/low the fish moves
+    const verticalSpeed = 2; // Speed of up and down movement
+
+    // Update fish position along a circular path, moves up and down in Z sinusodal
+    fish.position.x = Math.sin(time) * radius;
+    fish.position.z = Math.cos(time) * radius;
+    fish.position.y = Math.sin(time * verticalSpeed) * verticalAmplitude;
+
+    const nextX = Math.sin(time + dt) * radius;
+    const nextZ = Math.cos(time + dt) * radius;
+    const nextY = Math.sin((time + dt) * verticalSpeed) * verticalAmplitude;
+    const nextPos = new THREE.Vector3(nextX, nextY, nextZ);
+
+    // Rotate the fish so its head faces the direction of movement
+    fish.lookAt(nextPos);
+
     renderer.render(scene, camera);
 }
 
