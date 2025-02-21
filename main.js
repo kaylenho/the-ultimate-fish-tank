@@ -91,7 +91,58 @@ desk.position.set(0, -18.52, 0); // Adjust based on your aquarium's position
 // Add desk to the scene
 scene.add(desk);
 
+const legGeometry = new THREE.BoxGeometry(2, 20, 2); // Thin, tall cuboid for legs
+const legMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Same brown color as desk
 
+// Create four legs
+const leg1 = new THREE.Mesh(legGeometry, legMaterial);
+const leg2 = new THREE.Mesh(legGeometry, legMaterial);
+const leg3 = new THREE.Mesh(legGeometry, legMaterial);
+const leg4 = new THREE.Mesh(legGeometry, legMaterial);
+
+// Position legs at corners
+const deskHeight = -18.52 - 10; // Desk position - half the leg height
+const deskWidth = 90 / 2 - 1; // Half desk width - half leg width
+const deskDepth = 60 / 2 - 1; // Half desk depth - half leg depth
+
+leg1.position.set(deskWidth, deskHeight, deskDepth);
+leg2.position.set(-deskWidth, deskHeight, deskDepth);
+leg3.position.set(deskWidth, deskHeight, -deskDepth);
+leg4.position.set(-deskWidth, deskHeight, -deskDepth);
+
+// Add legs to the scene
+scene.add(leg1, leg2, leg3, leg4);
+
+// const floorGeometry = new THREE.BoxGeometry(150, 2, 100); // Large flat surface
+// const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x654321 }); // Dark brown for wooden floor
+
+// const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+
+// // Position it slightly below the desk legs
+// const floorHeight = -18.52 - 20 - 1; // Below the desk legs
+// floor.position.set(0, floorHeight, 0);
+
+// scene.add(floor);
+const textureLoader = new THREE.TextureLoader();
+const tileTexture = textureLoader.load('https://threejs.org/examples/textures/brick_diffuse.jpg'); // Example tile texture
+
+tileTexture.wrapS = THREE.RepeatWrapping;
+tileTexture.wrapT = THREE.RepeatWrapping;
+tileTexture.repeat.set(10, 10); // Repeats the texture for a tiled look
+
+const tileMaterial = new THREE.MeshStandardMaterial({
+    map: tileTexture,
+    roughness: 0.8, // Make it slightly glossy like tiles
+});
+
+const floorGeometry = new THREE.BoxGeometry(300, 2, 200); // Bigger floor
+const floor = new THREE.Mesh(floorGeometry, tileMaterial);
+
+// Position the floor below the desk
+const floorHeight = -18.52 - 20 - 1;
+floor.position.set(0, floorHeight, 0);
+
+scene.add(floor);
 // Position the Fish inside
 fish.position.set(0, -1, 0); 
 
