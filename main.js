@@ -29,7 +29,7 @@ const fish = new THREE.Group();
 scene.add(fish);
 
 // Material
-const material = new THREE.MeshPhongMaterial({ color: 0x80FFFF, shininess: 40 });
+const material = new THREE.MeshPhongMaterial({ color: 0xFF8C00, shininess: 40 }); //orange
 
 // Fish Head - More Rounded and Fish-Like
 const headGeometry = new THREE.SphereGeometry(1.2, 20, 16, 0, Math.PI * 2, 0, Math.PI/2); // 3/4 sphere for smooth transition
