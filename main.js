@@ -95,9 +95,51 @@ scene.add(desk);
 // Position the Fish inside
 fish.position.set(0, -1, 0); 
 
+const rockGeometry = new THREE.DodecahedronGeometry(2, 0); // '2' is the base radius
+// Modify vertices for a more irregular, natural look:
+const positionAttribute = rockGeometry.attributes.position;
+for (let i = 0; i < positionAttribute.count; i++) {
+    const vertex = new THREE.Vector3();
+    vertex.fromBufferAttribute(positionAttribute, i);
+    // Randomly offset each vertex a bit
+    vertex.x += (Math.random() - 0.5) * 0.5;
+    vertex.y += (Math.random() - 0.5) * 0.5;
+    vertex.z += (Math.random() - 0.5) * 0.5;
+    positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+}
+rockGeometry.computeVertexNormals();
 
+// Create a material for the rock
+const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 });
+const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+
+// Position the rock on the aquarium floor
+rock.position.set(5, -17, -3);  // Adjust position as needed
+
+// Add the rock to the scene
+scene.add(rock);
 // Animation Loop
 const clock = new THREE.Clock();
+
+
+function createSeaweed(x, z, height = 8) {
+    // Create a slender cylinder to represent seaweed
+    const seaweedGeometry = new THREE.CylinderGeometry(0.2, 0.2, height, 8, 1);
+    const seaweedMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+    const seaweed = new THREE.Mesh(seaweedGeometry, seaweedMaterial);
+    
+    // Position the seaweed so that its bottom sits on the aquarium floor
+    // Adjust y position: if the aquarium floor is at y = -18, then raising by height/2 positions the bottom at -18.
+    seaweed.position.set(x, -18 + height / 2, z);
+    return seaweed;
+}
+
+// Create a few seaweed instances at different positions
+const seaweed1 = createSeaweed(-8, 10, 8);
+const seaweed2 = createSeaweed(5, -12, 10);
+const seaweed3 = createSeaweed(12, 5, 7);
+
+scene.add(seaweed1, seaweed2, seaweed3);
 
 function animate() {
     requestAnimationFrame(animate);
@@ -123,9 +165,10 @@ function animate() {
 
     // Rotate the fish so its head faces the direction of movement
     fish.lookAt(nextPos);
-
+    
     renderer.render(scene, camera);
 }
+
 
 animate();
 
