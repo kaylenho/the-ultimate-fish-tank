@@ -95,62 +95,135 @@ scene.add(desk);
 // Position the Fish inside
 fish.position.set(0, -1, 0); 
 
-const rockGeometry = new THREE.DodecahedronGeometry(2, 0); // '2' is the base radius
-// Modify vertices for a more irregular, natural look:
-const positionAttribute = rockGeometry.attributes.position;
-for (let i = 0; i < positionAttribute.count; i++) {
-    const vertex = new THREE.Vector3();
-    vertex.fromBufferAttribute(positionAttribute, i);
-    // Randomly offset each vertex a bit
-    vertex.x += (Math.random() - 0.5) * 0.5;
-    vertex.y += (Math.random() - 0.5) * 0.5;
-    vertex.z += (Math.random() - 0.5) * 0.5;
-    positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+
+function createRock(x, y, z, scale = 1) {
+    const geometry = new THREE.DodecahedronGeometry(2, 0);
+    const posAttr = geometry.attributes.position;
+    for (let i = 0; i < posAttr.count; i++) {
+        const vertex = new THREE.Vector3();
+        vertex.fromBufferAttribute(posAttr, i);
+        vertex.x += (Math.random() - 0.5) * 0.5;
+        vertex.y += (Math.random() - 0.5) * 0.5;
+        vertex.z += (Math.random() - 0.5) * 0.5;
+        posAttr.setXYZ(i, vertex.x, vertex.y, vertex.z);
+    }
+    geometry.computeVertexNormals();
+    const material = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 });
+    const rock = new THREE.Mesh(geometry, material);
+    rock.position.set(x, y, z);
+    rock.scale.set(scale, scale, scale);
+    return rock;
 }
-rockGeometry.computeVertexNormals();
 
-// Create a material for the rock
-const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 });
-const rock = new THREE.Mesh(rockGeometry, rockMaterial);
-
-// Position the rock on the aquarium floor
-rock.position.set(5, -17, -3);  // Adjust position as needed
-
-// Add the rock to the scene
-scene.add(rock);
-// Animation Loop
-const clock = new THREE.Clock();
-
-
-function createSeaweed(x, z, height = 8) {
-    // Create a slender cylinder to represent seaweed
-    const seaweedGeometry = new THREE.CylinderGeometry(0.2, 0.2, height, 8, 1);
+// Animated seaweed: static base + dynamic top
+function createAnimatedSeaweed(x, z, totalHeight = 8, baseHeight = 2) {
+    const seaweedGroup = new THREE.Group();
     const seaweedMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
-    const seaweed = new THREE.Mesh(seaweedGeometry, seaweedMaterial);
     
-    // Position the seaweed so that its bottom sits on the aquarium floor
-    // Adjust y position: if the aquarium floor is at y = -18, then raising by height/2 positions the bottom at -18.
-    seaweed.position.set(x, -18 + height / 2, z);
-    return seaweed;
+    // Base (static part)
+    const baseGeometry = new THREE.CylinderGeometry(0.2, 0.2, baseHeight, 8, 1);
+    const baseMesh = new THREE.Mesh(baseGeometry, seaweedMaterial);
+    baseMesh.position.set(0, -18 + baseHeight / 2, 0);
+    seaweedGroup.add(baseMesh);
+    
+    // Top (dynamic part)
+    const topHeight = totalHeight - baseHeight;
+    const topGeometry = new THREE.CylinderGeometry(0.2, 0.2, topHeight, 8, 1);
+    const topMesh = new THREE.Mesh(topGeometry, seaweedMaterial);
+    // Position the top mesh so its base is at the pivot origin
+    topMesh.position.set(0, topHeight / 2, 0);
+    
+    // Pivot for animating the top part
+    const pivot = new THREE.Group();
+    pivot.position.set(0, -18 + baseHeight, 0); // at the top of the base
+    pivot.add(topMesh);
+    seaweedGroup.add(pivot);
+    
+    // Offset for individual sway animation
+    seaweedGroup.userData.pivot = pivot;
+    seaweedGroup.userData.offset = Math.random() * Math.PI * 2;
+    
+    // Set horizontal position
+    seaweedGroup.position.x = x;
+    seaweedGroup.position.z = z;
+    return seaweedGroup;
 }
 
-// Create a few seaweed instances at different positions
-const seaweed1 = createSeaweed(-8, 10, 8);
-const seaweed2 = createSeaweed(5, -12, 10);
-const seaweed3 = createSeaweed(12, 5, 7);
+// Create a cluster of animated seaweed pieces
+function createSeaweedCluster(num, centerX, centerZ, spread = 3) {
+    const cluster = new THREE.Group();
+    for (let i = 0; i < num; i++) {
+        const x = centerX + (Math.random() - 0.5) * spread;
+        const z = centerZ + (Math.random() - 0.5) * spread;
+        const totalHeight = 5 + Math.random() * 5; // between 5 and 10
+        const seaweed = createAnimatedSeaweed(x, z, totalHeight, 2);
+        cluster.add(seaweed);
+    }
+    return cluster;
+}
 
-scene.add(seaweed1, seaweed2, seaweed3);
+// Shell creation (flattened sphere)
+function createShell(x, z, scale = 1) {
+    const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+    geometry.scale(1, 0.5, 1);
+    const material = new THREE.MeshStandardMaterial({ color: 0xFFCC66, roughness: 0.8 });
+    const shell = new THREE.Mesh(geometry, material);
+    shell.position.set(x, -18 + 0.25 * scale, z);
+    shell.scale.set(scale, scale, scale);
+    return shell;
+}
+
+
+
+
+// Rocks
+const rocks = [];
+rocks.push(createRock(5, -17, -3, 1));
+rocks.push(createRock(-10, -16.5, 8, 1.2));
+rocks.push(createRock(12, -17.5, -6, 0.8));
+rocks.forEach(rock => scene.add(rock));
+
+// Seaweed clusters
+const seaweedCluster1 = createSeaweedCluster(5, 10, 4);
+const seaweedCluster2 = createSeaweedCluster(7, -8, -5);
+const seaweedCluster3 = createSeaweedCluster(6, 0, 12);
+scene.add(seaweedCluster1, seaweedCluster2, seaweedCluster3);
+
+// Shells
+const shells = [];
+shells.push(createShell(-5, 2, 1));
+shells.push(createShell(8, -10, 0.8));
+shells.push(createShell(-12, 6, 1.1));
+shells.forEach(shell => scene.add(shell));
+
+// add stuff near the edges 
+const edgeRocks = [];
+edgeRocks.push(createRock(24, -17, 20, 1));
+edgeRocks.push(createRock(-26, -16.5, -18, 1.2));
+edgeRocks.push(createRock(20, -17.5, -22, 0.8));
+edgeRocks.forEach(rock => scene.add(rock));
+
+
+
+
+const edgeShells = [];
+edgeShells.push(createShell(27, 0, 1));
+edgeShells.push(createShell(-25, 5, 0.8));
+edgeShells.forEach(shell => scene.add(shell));
+
+
+const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
 
     const time = clock.getElapsedTime();
-    const radius = 10;
+    const radius = 15;
     const dt = 0.01; // time for the look-ahead
 
     
-    const verticalAmplitude = 2; // How high/low the fish moves
+    const verticalAmplitude = 3; // How high/low the fish moves
     const verticalSpeed = 2; // Speed of up and down movement
 
     // Update fish position along a circular path, moves up and down in Z sinusodal
@@ -165,10 +238,17 @@ function animate() {
 
     // Rotate the fish so its head faces the direction of movement
     fish.lookAt(nextPos);
-    
+
+    [seaweedCluster1, seaweedCluster2, seaweedCluster3].forEach(cluster => {
+        cluster.children.forEach(seaweed => {
+            if (seaweed.userData.pivot) {
+                seaweed.userData.pivot.rotation.z = 0.2 * Math.sin(time * 2 + seaweed.userData.offset);
+            }
+        });
+    });
+
     renderer.render(scene, camera);
 }
-
 
 animate();
 
