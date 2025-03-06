@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -17,11 +18,11 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
 // Lighting
-const light = new THREE.DirectionalLight(0xffffff, 1);
+const light = new THREE.DirectionalLight(0xffffff, 5);
 light.position.set(5, 10, 5);
 scene.add(light);
 
-const ambientLight = new THREE.AmbientLight(0x404040);
+const ambientLight = new THREE.AmbientLight(0x404040, 10);
 scene.add(ambientLight);
 
 // Create Fish Group
@@ -113,6 +114,215 @@ leg4.position.set(-deskWidth, deskHeight, -deskDepth);
 // Add legs to the scene
 scene.add(leg1, leg2, leg3, leg4);
 
+const loader = new GLTFLoader();
+let selectedObject = null;
+const mouse = new THREE.Vector2(); // Declare the mouse vector
+
+// Load the coral model
+loader.load('/coral.glb', function (gltf) {
+    const coral = gltf.scene;
+    coral.scale.set(1, 1, 1); // Adjust scale if needed
+    coral.position.set(-16, -18, 0); // Adjust position inside the aquarium
+
+    // Ensure all child meshes are draggable
+    coral.traverse((child) => {
+        if (child.isMesh) {
+            child.userData.draggable = true;
+        }
+    });
+
+    scene.add(coral);
+});
+
+// Raycaster setup
+const raycaster = new THREE.Raycaster();
+const clickMouse = new THREE.Vector2();
+const moveMouse = new THREE.Vector2();
+
+window.addEventListener('mousedown', onMouseDown);
+window.addEventListener('mousemove', onMouseMove);
+window.addEventListener('mouseup', onMouseUp);
+function onMouseDown(event) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    if (intersects.length > 0) {
+        const object = intersects[0].object;
+
+        if (object.userData.draggable) {
+            selectedObject = object;
+            controls.enabled = false;
+
+            // Calculate and store the local offset of the coral relative to the click
+            const intersectionPoint = intersects[0].point;
+            selectedObject.userData.offset = {
+                x: intersectionPoint.x - selectedObject.position.x,
+                z: intersectionPoint.z - selectedObject.position.z,
+            };
+
+            selectedObject.userData.offsetY = selectedObject.position.y; // Maintain original height
+        }
+    }
+}
+
+
+function onMouseMove(event) {
+    if (!selectedObject) return;
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -selectedObject.userData.offsetY);
+   // const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), selectedObject.userData.offsetY);
+
+    const intersection = new THREE.Vector3();
+
+    if (raycaster.ray.intersectPlane(plane, intersection)) {
+        selectedObject.position.set(
+            intersection.x - selectedObject.userData.offset.x,
+            selectedObject.userData.offsetY, 
+            intersection.z - selectedObject.userData.offset.z
+        );
+    }
+}
+
+
+
+
+function onMouseUp() {
+    selectedObject = null;
+    controls.enabled = true; // Re-enable orbit controls
+}
+
+// const loader = new GLTFLoader();
+
+// // Load the coral model
+//  loader.load('/coral.glb', function (gltf){
+//         const coral = gltf.scene;
+//         coral.scale.set(1, 1, 1); // Adjust scale if needed
+//         coral.position.set(-16, -18, 0); // Adjust position inside the aquarium
+//         coral.userData.draggable = true; 
+//         scene.add(coral);
+//     }
+// );
+
+
+//   const raycaster = new THREE.Raycaster(); // create once
+//   const clickMouse = new THREE.Vector2();  // create once
+//   const moveMouse = new THREE.Vector2();   // create once
+//   //var draggable: THREE.Object3D;
+
+// window.addEventListener('mousedown', onMouseDown);
+// window.addEventListener('mousemove', onMouseMove);
+// window.addEventListener('mouseup', onMouseUp);
+// function onMouseDown(event) {
+//     // Convert mouse position to normalized device coordinates (-1 to +1)
+//     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+//     raycaster.setFromCamera(mouse, camera);
+//     const intersects = raycaster.intersectObjects(scene.children, true);
+
+//     if (intersects.length > 0) {
+//         const object = intersects[0].object;
+//         if (object.userData.draggable) {
+//             selectedObject = object;
+//             controls.enabled = false; // Disable orbit controls while dragging
+//         }
+//     }
+// }
+
+// function onMouseMove(event) {
+//     if (!selectedObject) return;
+
+//     // Convert mouse position to normalized device coordinates
+//     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+//     // Update raycaster and find intersection with ground plane (Y = -10)
+//     raycaster.setFromCamera(mouse, camera);
+//     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -10); // Plane at y = -10
+//     const intersection = new THREE.Vector3();
+    
+//     if (raycaster.ray.intersectPlane(plane, intersection)) {
+//         selectedObject.position.set(intersection.x, -10, intersection.z);
+//     }
+// }
+
+// function onMouseUp() {
+//     selectedObject = null;
+//     controls.enabled = true; // Re-enable orbit controls
+// }
+
+// // Load the coral model
+//  loader.load('/coral.glb', function (gltf){
+// // loader.load(
+// //     '/Users/neha/Downloads/CS174A/GroupProject/the-ultimate-fish-tank/coral.glb', // <-- Replace with the actual path to your downloaded GLB file
+// //     function (gltf) {
+//         const coral = gltf.scene;
+//         coral.scale.set(1, 1, 1); // Adjust scale if needed
+//         coral.position.set(-16, -18, 0); // Adjust position inside the aquarium
+//         scene.add(coral);
+//     }
+// );
+
+
+
+//   const raycaster = new THREE.Raycaster(); // create once
+//   const clickMouse = new THREE.Vector2();  // create once
+//   const moveMouse = new THREE.Vector2();   // create once
+//   var draggable: THREE.Object3D;
+  
+//   function intersect(pos: THREE.Vector2) {
+//     raycaster.setFromCamera(pos, camera);
+//     return raycaster.intersectObjects(scene.children);
+//   }
+  
+//   window.addEventListener('click', event => {
+//     if (draggable != null) {
+//       console.log(`dropping draggable ${draggable.userData.name}`)
+//       draggable = null as any
+//       return;
+//     }
+  
+//     // THREE RAYCASTER
+//     clickMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//     clickMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  
+//     const found = intersect(clickMouse);
+//     if (found.length > 0) {
+//       if (found[0].object.userData.draggable) {
+//         draggable = found[0].object
+//         console.log(`found draggable ${draggable.userData.name}`)
+//       }
+//     }
+//   })
+  
+//   window.addEventListener('mousemove', event => {
+//     moveMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//     moveMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+//   });
+  
+//   function dragObject() {
+//     if (draggable != null) {
+//       const found = intersect(moveMouse);
+//       if (found.length > 0) {
+//         for (let i = 0; i < found.length; i++) {
+//           if (!found[i].object.userData.ground)
+//             continue
+          
+//           let target = found[i].point;
+//           draggable.position.x = target.x
+//           draggable.position.z = target.z
+//         }
+//       }
+//     }
+//   }
+  
 // const floorGeometry = new THREE.BoxGeometry(150, 2, 100); // Large flat surface
 // const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x654321 }); // Dark brown for wooden floor
 
