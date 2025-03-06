@@ -17,11 +17,11 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
 // Lighting
-const light = new THREE.DirectionalLight(0xffffff, 1);
+const light = new THREE.DirectionalLight(0xffffff, 5);
 light.position.set(5, 10, 5);
 scene.add(light);
 
-const ambientLight = new THREE.AmbientLight(0x404040);
+const ambientLight = new THREE.AmbientLight(0x404040,10);
 scene.add(ambientLight);
 
 // Create Fish Group
@@ -79,6 +79,43 @@ const edgesGeometry = new THREE.EdgesGeometry(aquariumGeometry);
 const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000 }); // Black edges
 const aquariumEdges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
 scene.add(aquariumEdges);
+
+//sand floor
+
+// Load the displacement map
+const displacementMap = new THREE.TextureLoader().load('https://threejs.org/examples/textures/brick_diffuse.jpg');  // Replace with the path to your image
+
+const sandGeometry = new THREE.BoxGeometry(aquariumWidth,2, aquariumDepth,100,10,100);
+const sandMaterial = new THREE.MeshStandardMaterial({
+    color:0xd2b48c,
+    displacementMap: displacementMap,
+    displacementScale: 2,
+    displacementBias: 0,
+    roughness: 0.3,
+});
+const sand = new THREE.Mesh(sandGeometry,sandMaterial);
+sand.position.set(0,-17,0);
+scene.add(sand);
+
+// const sandTexture = new THREE.PlaneGeometry(aquariumWidth, 2, aquariumDepth,100,10,100);
+// const sandTextureMaterial = new THREE.MeshStandardMaterial({
+//     color:0xd2b48c,
+//     displacementMap: displacementMap,
+//     displacementScale: 2,
+//     displacementBias: 0,
+//     roughness: 0.3,
+// });
+// sand.position.set(0,-17,0);
+// scene.add(sandTexture);
+
+
+
+//fish food
+const fishFoodGeometry = new THREE.CylinderGeometry(4,4,8,32,8);
+const fishFoodMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
+const fishFood = new THREE.Mesh(fishFoodGeometry,fishFoodMaterial);
+fishFood.position.set(35,-14,0);
+scene.add(fishFood);
 
 // Desk Geometry
 const deskGeometry = new THREE.BoxGeometry(90, 1, 60); // Wide and flat surface
