@@ -80,35 +80,31 @@ const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000 }); // Black
 const aquariumEdges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
 scene.add(aquariumEdges);
 
-//sand floor
-
 // Load the displacement map
-const displacementMap = new THREE.TextureLoader().load('https://threejs.org/examples/textures/brick_diffuse.jpg');  // Replace with the path to your image
+const displacementMap = new THREE.TextureLoader().load('./assets/sand.jpg');
 
-const sandGeometry = new THREE.BoxGeometry(aquariumWidth,2, aquariumDepth,100,10,100);
-const sandMaterial = new THREE.MeshStandardMaterial({
+const sandFloorGeometry = new THREE.BoxGeometry(aquariumWidth,2, aquariumDepth,100,10,100);
+const sandFloorMaterial = new THREE.MeshStandardMaterial({
     color:0xd2b48c,
+});
+const sandFloor = new THREE.Mesh(sandFloorGeometry,sandFloorMaterial);
+sandFloor.position.set(0,-17,0);
+scene.add(sandFloor);
+
+const sandGeometry = new THREE.PlaneGeometry(aquariumWidth, aquariumDepth,500,500);
+sandGeometry.rotateX(Math.PI);
+const sandMaterial = new THREE.MeshPhongMaterial({
+    color:0xCEAA7A,
     displacementMap: displacementMap,
-    displacementScale: 2,
+    displacementScale: 1,
     displacementBias: 0,
     roughness: 0.3,
-});
+})
+
 const sand = new THREE.Mesh(sandGeometry,sandMaterial);
-sand.position.set(0,-17,0);
+sand.rotation.x = Math.PI/2;
+sand.position.set(0,-16.8,0);
 scene.add(sand);
-
-// const sandTexture = new THREE.PlaneGeometry(aquariumWidth, 2, aquariumDepth,100,10,100);
-// const sandTextureMaterial = new THREE.MeshStandardMaterial({
-//     color:0xd2b48c,
-//     displacementMap: displacementMap,
-//     displacementScale: 2,
-//     displacementBias: 0,
-//     roughness: 0.3,
-// });
-// sand.position.set(0,-17,0);
-// scene.add(sandTexture);
-
-
 
 //fish food
 const fishFoodGeometry = new THREE.CylinderGeometry(4,4,8,32,8);
