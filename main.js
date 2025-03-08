@@ -16,12 +16,31 @@ document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-// Lighting
-const light = new THREE.DirectionalLight(0xffffff, 5);
-light.position.set(5, 10, 5);
-scene.add(light);
+// Shadows
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 
-const ambientLight = new THREE.AmbientLight(0x404040,10);
+// Lighting
+// const light = new THREE.DirectionalLight(0xffffff, 1);
+// light.position.set(30, 30, 5);
+// light.castShadow = true;
+// light.shadow.mapSize.width = 2048;
+// light.shadow.mapSize.height = 2048;
+// scene.add(light);
+
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(2,10,1);
+light.target.position.set(0,-32,0);
+const lightHelper = new THREE.DirectionalLightHelper(light,3);
+scene.add(light,lightHelper);
+
+const pointLight = new THREE.PointLight(0xffffff,5,100);
+pointLight.position.set(0,5,0);
+scene.add(pointLight);
+const pointLightHelper = new THREE.PointLightHelper(pointLight);
+scene.add(pointLightHelper);
+
+const ambientLight = new THREE.AmbientLight(0x404040,1);
 scene.add(ambientLight);
 
 // Create Fish Group
@@ -170,6 +189,7 @@ const tileMaterial = new THREE.MeshStandardMaterial({
 
 const floorGeometry = new THREE.BoxGeometry(300, 2, 200); // Bigger floor
 const floor = new THREE.Mesh(floorGeometry, tileMaterial);
+floor.receiveShadow = true;
 
 // Position the floor below the desk
 const floorHeight = -18.52 - 20 - 1;
@@ -179,6 +199,27 @@ scene.add(floor);
 // Position the Fish inside
 fish.position.set(0, -1, 0); 
 
+//enabling shadows
+fishBody.castShadow = true;
+fishBody.receiveShadow = true;
+
+fishHead.castShadow = true;
+fishHead.receiveShadow = true;
+
+fishTail.castShadow = true;
+fishTail.receiveShadow = true;
+
+desk.castShadow = true;
+desk.receiveShadow = true;
+
+// fishFood.castShadow = true;
+
+floor.castShadow = false;
+floor.receiveShadow = true;
+
+const shadowHelper = new THREE.CameraHelper(light.shadow.camera);
+scene.add(shadowHelper);
+// /////
 
 function createRock(x, y, z, scale = 1) {
     const geometry = new THREE.DodecahedronGeometry(2, 0);
@@ -273,6 +314,13 @@ const seaweedCluster2 = createSeaweedCluster(7, -8, -5);
 const seaweedCluster3 = createSeaweedCluster(6, 0, 12);
 scene.add(seaweedCluster1, seaweedCluster2, seaweedCluster3);
 
+seaweedCluster1.castShadow = true;
+seaweedCluster1.receiveShadow = true;
+seaweedCluster2.castShadow = true;
+seaweedCluster2.receiveShadow = true;
+seaweedCluster3.castShadow = true;
+seaweedCluster3.receiveShadow = true;
+
 // Shells
 const shells = [];
 shells.push(createShell(-5, 2, 1));
@@ -294,7 +342,6 @@ const edgeShells = [];
 edgeShells.push(createShell(27, 0, 1));
 edgeShells.push(createShell(-25, 5, 0.8));
 edgeShells.forEach(shell => scene.add(shell));
-
 
 const clock = new THREE.Clock();
 
