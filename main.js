@@ -1,5 +1,3 @@
-
-
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -21,7 +19,31 @@ controls.enableDamping = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 
-scene.background = new THREE.Color(0x000000);
+// Load the 360-degree panorama image
+const bTextureLoader = new THREE.TextureLoader();
+const texture = bTextureLoader.load('./assets/bedroom.jpg');  // Path to your panoramic image
+
+// Create a sphere geometry and apply the texture to it
+const Bgeometry = new THREE.SphereGeometry(100, 60, 40); // Large radius to cover the camera
+const Bmaterial = new THREE.MeshBasicMaterial({
+    map: texture,        // The panorama texture
+    side: THREE.BackSide // Invert the sphere's normals to make the texture inside
+});
+
+// Create a mesh with the geometry and material
+const sphere = new THREE.Mesh(Bgeometry, Bmaterial);
+
+// Add the sphere to the scene (background)
+scene.add(sphere);
+
+// backgroundTextureLoader.load(
+//     './assets/bedroom.jpg',  // Path to your image in the assets folder
+//     function (texture) {
+//         // Set the texture as the scene's background
+//         scene.background = texture;
+//     }
+// );
+// scene.background = new THREE.Color(0x000000);
 
 const light = new THREE.DirectionalLight(0xffffff,1);
 light.position.set(2,10,1);
@@ -36,6 +58,9 @@ light.shadow.camera.top = 70;
 const lightHelper = new THREE.DirectionalLightHelper(light,3);
 scene.add(light,lightHelper);
 
+const shadowHelper = new THREE.CameraHelper(light.shadow.camera);
+scene.add(shadowHelper);
+
 function createPointLight(x,y,z,color,intensity){
     const pointLight = new THREE.PointLight(color,intensity,100);
     pointLight.position.set(x,y,z);
@@ -46,11 +71,6 @@ function createPointLight(x,y,z,color,intensity){
 
 const pointLights = [];
 pointLights.push(createPointLight(0,8,5,0x0096FF,100));
-// pointLights.push(createPointLight(-10,8,5,0x0096FF,100));
-// pointLights.push(createPointLight(10,8,5,0x0096FF,100));
-// pointLights.push(createPointLight(0,8,-5,0x0096FF,100));
-// pointLights.push(createPointLight(-10,8,-5,0x0096FF,100));
-// pointLights.push(createPointLight(10,8,-5,0x0096FF,100));
 pointLights.forEach(pointLight => scene.add(pointLight));
 
 
@@ -70,6 +90,8 @@ headGeometry.scale(.75, 3,1.5); // Make it slightly oval
 const fishHead = new THREE.Mesh(headGeometry, material);
 fishHead.rotation.x = Math.PI / 2;
 fishHead.position.set(0, 0, 2.5); // Pushed slightly into the body
+fishHead.castShadow = true;
+fishHead.receiveShadow = true;
 fish.add(fishHead);
 
 // Fish Body - Ellipsoid Shape (With Clipped Front)
@@ -79,6 +101,8 @@ const fishBody = new THREE.Mesh(bodyGeometry, material);
 fishBody.rotation.x = Math.PI / 2;
 fishBody.rotation.z = Math.PI;
 fishBody.position.set(0, 0, 2.5); // Shifted slightly to avoid overlap
+fishBody.castShadow = true;
+fishBody.receiveShadow = true;
 fish.add(fishBody);
 
 // Fish Tail - Fan-Like Shape
@@ -88,6 +112,8 @@ const tailGeometry = new THREE.ConeGeometry(tailRadius, tailHeight, 6);
 const fishTail = new THREE.Mesh(tailGeometry, material);
 fishTail.rotation.x = Math.PI / 2;
 fishTail.position.set(0, 0, -4);
+fishTail.castShadow = true;
+fishTail.receiveShadow = true;
 fish.add(fishTail);
 
 
@@ -112,6 +138,7 @@ aquarium.position.set(0,-2,0);
 const edgesGeometry = new THREE.EdgesGeometry(aquariumGeometry);
 const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000 }); // Black edges
 const aquariumEdges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+aquariumEdges.position.set(0,-2,0);
 scene.add(aquariumEdges);
 
 ////////////////////// aquarium boundary
@@ -178,6 +205,8 @@ const desk = new THREE.Mesh(deskGeometry, deskMaterial);
 desk.position.set(0, -20.52, 0); // Adjust based on your aquarium's position
 
 // Add desk to the scene
+desk.castShadow = true;
+desk.receiveShadow = true;
 scene.add(desk);
 
 const legGeometry = new THREE.BoxGeometry(2, 20, 2); // Thin, tall cuboid for legs
@@ -185,9 +214,17 @@ const legMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Same
 
 // Create four legs
 const leg1 = new THREE.Mesh(legGeometry, legMaterial);
+leg1.castShadow = true;
+leg1.receiveShadow = true;
 const leg2 = new THREE.Mesh(legGeometry, legMaterial);
+leg2.castShadow = true;
+leg2.receiveShadow = true;
 const leg3 = new THREE.Mesh(legGeometry, legMaterial);
+leg3.castShadow = true;
+leg3.receiveShadow = true;
 const leg4 = new THREE.Mesh(legGeometry, legMaterial);
+leg4.castShadow = true;
+leg4.receiveShadow = true;
 
 // Position legs at corners
 const deskHeight = -20.52 - 10; // Desk position - half the leg height
@@ -231,33 +268,14 @@ floor.receiveShadow = true;
 // Position the floor below the desk
 const floorHeight = -20.52 - 20 - 1;
 floor.position.set(0, floorHeight, 0);
-
+floor.receiveShadow = true;
 scene.add(floor);
+
 // Position the Fish inside
 fish.position.set(0, -1, 0); 
 
-//enabling shadows
-fishBody.castShadow = true;
-fishBody.receiveShadow = true;
 
-fishHead.castShadow = true;
-fishHead.receiveShadow = true;
-
-fishTail.castShadow = true;
-fishTail.receiveShadow = true;
-
-desk.castShadow = true;
-desk.receiveShadow = true;
-
-// fishFood.castShadow = true;
-
-floor.castShadow = false;
-floor.receiveShadow = true;
-
-const shadowHelper = new THREE.CameraHelper(light.shadow.camera);
-scene.add(shadowHelper);
-// /////
-
+//Adding tank decorations
 function createRock(x, y, z, scale = 1) {
     const geometry = new THREE.DodecahedronGeometry(2, 0);
     const posAttr = geometry.attributes.position;
@@ -396,29 +414,14 @@ loader.load('./assets/coral.glb', function (gltf) {
         if (child.isMesh) {
             child.userData.draggable = true;
             child.userData.name = "coral";
+            child.castShadow = true;
         }
     });
-
     scene.add(coral);
 });
 
-const testSphereGeometry = new THREE.SphereGeometry(8,16,16);
-const testSphereMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
-let testSphere = new THREE.Mesh(testSphereGeometry, testSphereMaterial);
-testSphere.position.set(-10,-18,0);
-testSphere.userData.draggable = true;
-testSphere.userData.name = "sphere";
-scene.add(testSphere);
 
-const testCubeGeometry = new THREE.BoxGeometry(2,2,2);
-const testCubeMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
-let testCube = new THREE.Mesh(testCubeGeometry, testCubeMaterial);
-testCube.position.set(0,-18,0);
-testCube.userData.draggable = true;
-testCube.userData.name = "cube";
-scene.add(testCube);
-
-//following tutorial exactly
+//Drag Drop Functionality
 
 const raycaster = new THREE.Raycaster();
 const clickMouse = new THREE.Vector2();
@@ -474,7 +477,7 @@ function dragObject(){
 }
 
 
-
+//Alternative method, click and hold to move objects
 // // Raycaster setup
 // const raycaster = new THREE.Raycaster();
 // const clickMouse = new THREE.Vector2();
@@ -543,7 +546,7 @@ const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    dragObject();
+    dragObject(); //drag drop functionality
 
     const time = clock.getElapsedTime();
     const radius = 15;
