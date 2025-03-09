@@ -81,6 +81,18 @@ const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000 }); // Black
 const aquariumEdges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
 scene.add(aquariumEdges);
 
+const aquariumBoundaryGeometry = new THREE.PlaneGeometry(aquariumWidth-15, aquariumDepth-15); // Adjust size
+const aquariumBoundaryMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x000000, 
+    transparent: true, 
+    opacity: 0 // Fully invisible 
+});
+const aquariumBoundary = new THREE.Mesh(aquariumBoundaryGeometry, aquariumBoundaryMaterial);
+scene.add(aquariumBoundary);
+aquariumBoundary.position.set(0, -18.51, 0);
+aquariumBoundary.rotation.x = (-Math.PI/2);
+aquariumBoundary.userData.ground = true;
+
 // Desk Geometry
 const deskGeometry = new THREE.BoxGeometry(90, 1, 60); // Wide and flat surface
 const deskMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Brown color (wood-like)
@@ -91,6 +103,7 @@ desk.position.set(0, -18.52, 0); // Adjust based on your aquarium's position
 
 // Add desk to the scene
 scene.add(desk);
+//desk.userData.ground = true;
 
 const legGeometry = new THREE.BoxGeometry(2, 20, 2); // Thin, tall cuboid for legs
 const legMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Same brown color as desk
@@ -128,75 +141,146 @@ loader.load('/coral.glb', function (gltf) {
     coral.traverse((child) => {
         if (child.isMesh) {
             child.userData.draggable = true;
+            child.userData.name = "coral";
         }
     });
 
     scene.add(coral);
 });
 
-// Raycaster setup
+const testSphereGeometry = new THREE.SphereGeometry(8,16,16);
+const testSphereMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
+let testSphere = new THREE.Mesh(testSphereGeometry, testSphereMaterial);
+testSphere.position.set(-10,-18,0);
+testSphere.userData.draggable = true;
+testSphere.userData.name = "sphere";
+scene.add(testSphere);
+
+const testCubeGeometry = new THREE.BoxGeometry(2,2,2);
+const testCubeMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
+let testCube = new THREE.Mesh(testCubeGeometry, testCubeMaterial);
+testCube.position.set(0,-18,0);
+testCube.userData.draggable = true;
+testCube.userData.name = "cube";
+scene.add(testCube);
+
+//following tutorial exactly
+
 const raycaster = new THREE.Raycaster();
 const clickMouse = new THREE.Vector2();
 const moveMouse = new THREE.Vector2();
+var draggable;
 
-window.addEventListener('mousedown', onMouseDown);
-window.addEventListener('mousemove', onMouseMove);
-window.addEventListener('mouseup', onMouseUp);
-function onMouseDown(event) {
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+window.addEventListener('click', event =>{
 
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(scene.children, true);
+    if(draggable){
+        console.log(`dropping draggable ${draggable.userData.name}`)
+        draggable = null;
+        return;
+    }
 
-    if (intersects.length > 0) {
-        const object = intersects[0].object;
+    clickMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    clickMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        if (object.userData.draggable) {
-            selectedObject = object;
-            controls.enabled = false;
+    raycaster.setFromCamera(clickMouse, camera);
+    raycaster.intersectObjects(scene.children);
+    const found = raycaster.intersectObjects(scene.children);
 
-            // Calculate and store the local offset of the coral relative to the click
-            const intersectionPoint = intersects[0].point;
-            selectedObject.userData.offset = {
-                x: intersectionPoint.x - selectedObject.position.x,
-                z: intersectionPoint.z - selectedObject.position.z,
-            };
+    if(found.length > 0 && found[0].object.userData.draggable){
+        draggable = found[0].object;
+        console.log(`found draggable object ${draggable.userData.name}`);
 
-            selectedObject.userData.offsetY = selectedObject.position.y; // Maintain original height
+        //store offset
+        draggable.userData.offset = {
+            x: found[0].point.x - draggable.position.x,
+            z: found[0].point.z - draggable.position.z
+        };
+    }
+})
+
+window.addEventListener('mousemove', event =>{
+    moveMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    moveMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+})
+
+function dragObject(){
+    if(draggable != null){
+        raycaster.setFromCamera(moveMouse, camera);
+        const found = raycaster.intersectObjects(scene.children);
+        if(found.length > 0){
+            for(let o of found){
+                if(!o.object.userData.ground)
+                    continue;
+
+                draggable.position.x = o.point.x - draggable.userData.offset.x;
+                draggable.position.z = o.point.z - draggable.userData.offset.z;
+            }
         }
     }
 }
 
 
-function onMouseMove(event) {
-    if (!selectedObject) return;
 
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+// // Raycaster setup
+// const raycaster = new THREE.Raycaster();
+// const clickMouse = new THREE.Vector2();
+// const moveMouse = new THREE.Vector2();
 
-    raycaster.setFromCamera(mouse, camera);
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -selectedObject.userData.offsetY);
-   // const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), selectedObject.userData.offsetY);
+// window.addEventListener('mousedown', onMouseDown);
+// window.addEventListener('mousemove', onMouseMove);
+// window.addEventListener('mouseup', onMouseUp);
 
-    const intersection = new THREE.Vector3();
+// function onMouseDown(event) {
+//     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    if (raycaster.ray.intersectPlane(plane, intersection)) {
-        selectedObject.position.set(
-            intersection.x - selectedObject.userData.offset.x,
-            selectedObject.userData.offsetY, 
-            intersection.z - selectedObject.userData.offset.z
-        );
-    }
-}
+//     raycaster.setFromCamera(mouse, camera);
+//     const intersects = raycaster.intersectObjects(scene.children, true);
 
+//     if (intersects.length > 0) {
+//         const object = intersects[0].object;
 
+//         if (object.userData.draggable) {
+//             selectedObject = object;
+//             controls.enabled = false;
 
+//             // Calculate and store the local offset of the coral relative to the click
+//             const intersectionPoint = intersects[0].point;
+//             selectedObject.userData.offset = {
+//                 x: intersectionPoint.x - selectedObject.position.x,
+//                 z: intersectionPoint.z - selectedObject.position.z,
+//             };
 
-function onMouseUp() {
-    selectedObject = null;
-    controls.enabled = true; // Re-enable orbit controls
-}
+//             selectedObject.userData.offsetY = selectedObject.position.y; // Maintain original height
+//         }
+//     }
+// }
+
+// function onMouseMove(event) {
+//     if (!selectedObject) return;
+
+//     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+//     raycaster.setFromCamera(mouse, camera);
+//     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -selectedObject.userData.offsetY);
+//    // const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), selectedObject.userData.offsetY);
+
+//     const intersection = new THREE.Vector3();
+
+//     if (raycaster.ray.intersectPlane(plane, intersection)) {
+//         selectedObject.position.set(
+//             intersection.x - selectedObject.userData.offset.x,
+//             selectedObject.userData.offsetY, 
+//             intersection.z - selectedObject.userData.offset.z
+//         );
+//     }
+// }
+
+// function onMouseUp() {
+//     selectedObject = null;
+//     controls.enabled = true; // Re-enable orbit controls
+// }
 
 // const loader = new GLTFLoader();
 
@@ -478,6 +562,7 @@ const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    dragObject(); ////////////////////////////
 
     const time = clock.getElapsedTime();
     const radius = 15;
