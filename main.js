@@ -184,7 +184,7 @@ window.addEventListener('click', event =>{
 
     raycaster.setFromCamera(clickMouse, camera);
     raycaster.intersectObjects(scene.children);
-    const found = raycaster.intersectObjects(scene.children);
+    const found = raycaster.intersectObjects(scene.children, true);
 
     if(found.length > 0 && found[0].object.userData.draggable){
         draggable = found[0].object;
@@ -457,6 +457,7 @@ function createRock(x, y, z, scale = 1) {
     const rock = new THREE.Mesh(geometry, material);
     rock.position.set(x, y, z);
     rock.scale.set(scale, scale, scale);
+    rock.userData.draggable = true;
     return rock;
 }
 
@@ -515,6 +516,7 @@ function createShell(x, z, scale = 1) {
     const shell = new THREE.Mesh(geometry, material);
     shell.position.set(x, -18 + 0.25 * scale, z);
     shell.scale.set(scale, scale, scale);
+    shell.userData.draggable = true;
     return shell;
 }
 
