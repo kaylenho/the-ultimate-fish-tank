@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -21,14 +22,6 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 
 scene.background = new THREE.Color(0x000000);
-
-// Lighting
-// const light = new THREE.DirectionalLight(0xffffff, 1);
-// light.position.set(30, 30, 5);
-// light.castShadow = true;
-// light.shadow.mapSize.width = 2048;
-// light.shadow.mapSize.height = 2048;
-// scene.add(light);
 
 const light = new THREE.DirectionalLight(0xffffff,1);
 light.position.set(2,10,1);
@@ -53,11 +46,11 @@ function createPointLight(x,y,z,color,intensity){
 
 const pointLights = [];
 pointLights.push(createPointLight(0,8,5,0x0096FF,100));
-pointLights.push(createPointLight(-10,8,5,0x0096FF,100));
-pointLights.push(createPointLight(10,8,5,0x0096FF,100));
-pointLights.push(createPointLight(0,8,-5,0x0096FF,100));
-pointLights.push(createPointLight(-10,8,-5,0x0096FF,100));
-pointLights.push(createPointLight(10,8,-5,0x0096FF,100));
+// pointLights.push(createPointLight(-10,8,5,0x0096FF,100));
+// pointLights.push(createPointLight(10,8,5,0x0096FF,100));
+// pointLights.push(createPointLight(0,8,-5,0x0096FF,100));
+// pointLights.push(createPointLight(-10,8,-5,0x0096FF,100));
+// pointLights.push(createPointLight(10,8,-5,0x0096FF,100));
 pointLights.forEach(pointLight => scene.add(pointLight));
 
 
@@ -115,10 +108,27 @@ const aquariumMaterial = new THREE.MeshPhysicalMaterial({
 
 const aquarium = new THREE.Mesh(aquariumGeometry, aquariumMaterial);
 scene.add(aquarium);
+aquarium.position.set(0,-2,0);
 const edgesGeometry = new THREE.EdgesGeometry(aquariumGeometry);
 const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000 }); // Black edges
 const aquariumEdges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
 scene.add(aquariumEdges);
+
+////////////////////// aquarium boundary
+
+const aquariumBoundaryGeometry = new THREE.PlaneGeometry(aquariumWidth-15, aquariumDepth-15); // Adjust size
+const aquariumBoundaryMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x000000, 
+    transparent: true, 
+    opacity: 0 // Fully invisible 
+});
+const aquariumBoundary = new THREE.Mesh(aquariumBoundaryGeometry, aquariumBoundaryMaterial);
+scene.add(aquariumBoundary);
+aquariumBoundary.position.set(0, -20.51, 0);
+aquariumBoundary.rotation.x = (-Math.PI/2);
+aquariumBoundary.userData.ground = true;
+
+//////////////////////////
 
 // Load the displacement map
 const displacementMap = new THREE.TextureLoader().load('./assets/sand.jpg');
@@ -128,7 +138,7 @@ const sandFloorMaterial = new THREE.MeshStandardMaterial({
     color:0xd2b48c,
 });
 const sandFloor = new THREE.Mesh(sandFloorGeometry,sandFloorMaterial);
-sandFloor.position.set(0,-17,0);
+sandFloor.position.set(0,-19,0);
 scene.add(sandFloor);
 sandFloor.castShadow = true;
 sandFloor.receiveShadow = true;
@@ -140,12 +150,12 @@ const sandMaterial = new THREE.MeshPhongMaterial({
     displacementMap: displacementMap,
     displacementScale: 1,
     displacementBias: 0,
-    roughness: 0.3,
+    //roughness: 0.3,
 })
 
 const sand = new THREE.Mesh(sandGeometry,sandMaterial);
 sand.rotation.x = Math.PI/2;
-sand.position.set(0,-16.8,0);
+sand.position.set(0,-18.8,0);
 scene.add(sand);
 sand.castShadow = true;
 sand.receiveShadow = true;
@@ -154,7 +164,7 @@ sand.receiveShadow = true;
 const fishFoodGeometry = new THREE.CylinderGeometry(4,4,8,32,8);
 const fishFoodMaterial = new THREE.MeshPhongMaterial({color: 0xffffff});
 const fishFood = new THREE.Mesh(fishFoodGeometry,fishFoodMaterial);
-fishFood.position.set(35,-14,0);
+fishFood.position.set(35,-16,0);
 fishFood.castShadow = true;
 fishFood.receiveShadow = true;
 scene.add(fishFood);
@@ -165,7 +175,7 @@ const deskMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Bro
 const desk = new THREE.Mesh(deskGeometry, deskMaterial);
 
 // Position the desk slightly below the aquarium
-desk.position.set(0, -18.52, 0); // Adjust based on your aquarium's position
+desk.position.set(0, -20.52, 0); // Adjust based on your aquarium's position
 
 // Add desk to the scene
 scene.add(desk);
@@ -180,7 +190,7 @@ const leg3 = new THREE.Mesh(legGeometry, legMaterial);
 const leg4 = new THREE.Mesh(legGeometry, legMaterial);
 
 // Position legs at corners
-const deskHeight = -18.52 - 10; // Desk position - half the leg height
+const deskHeight = -20.52 - 10; // Desk position - half the leg height
 const deskWidth = 90 / 2 - 1; // Half desk width - half leg width
 const deskDepth = 60 / 2 - 1; // Half desk depth - half leg depth
 
@@ -219,7 +229,7 @@ const floor = new THREE.Mesh(floorGeometry, tileMaterial);
 floor.receiveShadow = true;
 
 // Position the floor below the desk
-const floorHeight = -18.52 - 20 - 1;
+const floorHeight = -20.52 - 20 - 1;
 floor.position.set(0, floorHeight, 0);
 
 scene.add(floor);
@@ -266,6 +276,8 @@ function createRock(x, y, z, scale = 1) {
     rock.scale.set(scale, scale, scale);
     rock.castShadow = true;
     rock.receiveShadow = true;
+    rock.userData.draggable = true;
+
     return rock;
 }
 
@@ -330,11 +342,10 @@ function createShell(x, z, scale = 1) {
     shell.scale.set(scale, scale, scale);
     shell.castShadow = true;
     shell.receiveShadow = true;
+    shell.userData.draggable = true;
+
     return shell;
 }
-
-
-
 
 // Rocks
 const rocks = [];
@@ -363,19 +374,176 @@ edgeRocks.push(createRock(-26, -16.5, -18, 1.2));
 edgeRocks.push(createRock(20, -17.5, -22, 0.8));
 edgeRocks.forEach(rock => scene.add(rock));
 
-
-
-
 const edgeShells = [];
 edgeShells.push(createShell(27, 0, 1));
 edgeShells.push(createShell(-25, 5, 0.8));
 edgeShells.forEach(shell => scene.add(shell));
+
+//////////////////////// raycasting
+
+const loader = new GLTFLoader();
+let selectedObject = null;
+const mouse = new THREE.Vector2(); // Declare the mouse vector
+
+// Load the coral model
+loader.load('./assets/coral.glb', function (gltf) {
+    const coral = gltf.scene;
+    coral.scale.set(1, 1, 1); // Adjust scale if needed
+    coral.position.set(-16, -18, 0); // Adjust position inside the aquarium
+
+    // Ensure all child meshes are draggable
+    coral.traverse((child) => {
+        if (child.isMesh) {
+            child.userData.draggable = true;
+            child.userData.name = "coral";
+        }
+    });
+
+    scene.add(coral);
+});
+
+const testSphereGeometry = new THREE.SphereGeometry(8,16,16);
+const testSphereMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
+let testSphere = new THREE.Mesh(testSphereGeometry, testSphereMaterial);
+testSphere.position.set(-10,-18,0);
+testSphere.userData.draggable = true;
+testSphere.userData.name = "sphere";
+scene.add(testSphere);
+
+const testCubeGeometry = new THREE.BoxGeometry(2,2,2);
+const testCubeMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
+let testCube = new THREE.Mesh(testCubeGeometry, testCubeMaterial);
+testCube.position.set(0,-18,0);
+testCube.userData.draggable = true;
+testCube.userData.name = "cube";
+scene.add(testCube);
+
+//following tutorial exactly
+
+const raycaster = new THREE.Raycaster();
+const clickMouse = new THREE.Vector2();
+const moveMouse = new THREE.Vector2();
+var draggable;
+
+window.addEventListener('click', event =>{
+
+    if(draggable){
+        console.log(`dropping draggable ${draggable.userData.name}`)
+        draggable = null;
+        return;
+    }
+
+    clickMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    clickMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(clickMouse, camera);
+    raycaster.intersectObjects(scene.children);
+    const found = raycaster.intersectObjects(scene.children, true);
+
+    if(found.length > 0 && found[0].object.userData.draggable){
+        draggable = found[0].object;
+        console.log(`found draggable object ${draggable.userData.name}`);
+
+        //store offset
+        draggable.userData.offset = {
+            x: found[0].point.x - draggable.position.x,
+            z: found[0].point.z - draggable.position.z
+        };
+    }
+})
+
+window.addEventListener('mousemove', event =>{
+    moveMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    moveMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+})
+
+function dragObject(){
+    if(draggable != null){
+        raycaster.setFromCamera(moveMouse, camera);
+        const found = raycaster.intersectObjects(scene.children);
+        if(found.length > 0){
+            for(let o of found){
+                if(!o.object.userData.ground)
+                    continue;
+
+                draggable.position.x = o.point.x - draggable.userData.offset.x;
+                draggable.position.z = o.point.z - draggable.userData.offset.z;
+            }
+        }
+    }
+}
+
+
+
+// // Raycaster setup
+// const raycaster = new THREE.Raycaster();
+// const clickMouse = new THREE.Vector2();
+// const moveMouse = new THREE.Vector2();
+
+// window.addEventListener('mousedown', onMouseDown);
+// window.addEventListener('mousemove', onMouseMove);
+// window.addEventListener('mouseup', onMouseUp);
+
+// function onMouseDown(event) {
+//     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+//     raycaster.setFromCamera(mouse, camera);
+//     const intersects = raycaster.intersectObjects(scene.children, true);
+
+//     if (intersects.length > 0) {
+//         const object = intersects[0].object;
+
+//         if (object.userData.draggable) {
+//             selectedObject = object;
+//             controls.enabled = false;
+
+//             // Calculate and store the local offset of the coral relative to the click
+//             const intersectionPoint = intersects[0].point;
+//             selectedObject.userData.offset = {
+//                 x: intersectionPoint.x - selectedObject.position.x,
+//                 z: intersectionPoint.z - selectedObject.position.z,
+//             };
+
+//             selectedObject.userData.offsetY = selectedObject.position.y; // Maintain original height
+//         }
+//     }
+// }
+
+// function onMouseMove(event) {
+//     if (!selectedObject) return;
+
+//     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+//     raycaster.setFromCamera(mouse, camera);
+//     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -selectedObject.userData.offsetY);
+//    // const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), selectedObject.userData.offsetY);
+
+//     const intersection = new THREE.Vector3();
+
+//     if (raycaster.ray.intersectPlane(plane, intersection)) {
+//         selectedObject.position.set(
+//             intersection.x - selectedObject.userData.offset.x,
+//             selectedObject.userData.offsetY, 
+//             intersection.z - selectedObject.userData.offset.z
+//         );
+//     }
+// }
+
+// function onMouseUp() {
+//     selectedObject = null;
+//     controls.enabled = true; // Re-enable orbit controls
+// }
+
+/////////////////////////
 
 const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    dragObject();
 
     const time = clock.getElapsedTime();
     const radius = 15;
