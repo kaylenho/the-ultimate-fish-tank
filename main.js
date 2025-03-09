@@ -20,6 +20,8 @@ controls.enableDamping = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 
+scene.background = new THREE.Color(0x000000);
+
 // Lighting
 // const light = new THREE.DirectionalLight(0xffffff, 1);
 // light.position.set(30, 30, 5);
@@ -30,17 +32,36 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
 const light = new THREE.DirectionalLight(0xffffff,1);
 light.position.set(2,10,1);
-light.target.position.set(0,-32,0);
+// light.target.position.set(0,-32,0);
+light.castShadow = true;
+light.shadow.mapSize.width = 2048;
+light.shadow.mapSize.height = 2048;
+light.shadow.camera.left = -70;
+light.shadow.camera.bottom = -70;
+light.shadow.camera.right = 70;
+light.shadow.camera.top = 70;
 const lightHelper = new THREE.DirectionalLightHelper(light,3);
 scene.add(light,lightHelper);
 
-const pointLight = new THREE.PointLight(0xffffff,5,100);
-pointLight.position.set(0,5,0);
-scene.add(pointLight);
-const pointLightHelper = new THREE.PointLightHelper(pointLight);
-scene.add(pointLightHelper);
+function createPointLight(x,y,z,color,intensity){
+    const pointLight = new THREE.PointLight(color,intensity,100);
+    pointLight.position.set(x,y,z);
+    const pointLightHelper = new THREE.PointLightHelper(pointLight);
+    pointLight.add(pointLightHelper);
+    return pointLight;
+}
 
-const ambientLight = new THREE.AmbientLight(0x404040,1);
+const pointLights = [];
+pointLights.push(createPointLight(0,8,5,0x0096FF,100));
+pointLights.push(createPointLight(-10,8,5,0x0096FF,100));
+pointLights.push(createPointLight(10,8,5,0x0096FF,100));
+pointLights.push(createPointLight(0,8,-5,0x0096FF,100));
+pointLights.push(createPointLight(-10,8,-5,0x0096FF,100));
+pointLights.push(createPointLight(10,8,-5,0x0096FF,100));
+pointLights.forEach(pointLight => scene.add(pointLight));
+
+
+const ambientLight = new THREE.AmbientLight(0x780C96,0.1);
 scene.add(ambientLight);
 
 // Create Fish Group
@@ -109,6 +130,8 @@ const sandFloorMaterial = new THREE.MeshStandardMaterial({
 const sandFloor = new THREE.Mesh(sandFloorGeometry,sandFloorMaterial);
 sandFloor.position.set(0,-17,0);
 scene.add(sandFloor);
+sandFloor.castShadow = true;
+sandFloor.receiveShadow = true;
 
 const sandGeometry = new THREE.PlaneGeometry(aquariumWidth, aquariumDepth,500,500);
 sandGeometry.rotateX(Math.PI);
@@ -124,12 +147,16 @@ const sand = new THREE.Mesh(sandGeometry,sandMaterial);
 sand.rotation.x = Math.PI/2;
 sand.position.set(0,-16.8,0);
 scene.add(sand);
+sand.castShadow = true;
+sand.receiveShadow = true;
 
 //fish food
 const fishFoodGeometry = new THREE.CylinderGeometry(4,4,8,32,8);
-const fishFoodMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
+const fishFoodMaterial = new THREE.MeshPhongMaterial({color: 0xffffff});
 const fishFood = new THREE.Mesh(fishFoodGeometry,fishFoodMaterial);
 fishFood.position.set(35,-14,0);
+fishFood.castShadow = true;
+fishFood.receiveShadow = true;
 scene.add(fishFood);
 
 // Desk Geometry
@@ -237,6 +264,8 @@ function createRock(x, y, z, scale = 1) {
     const rock = new THREE.Mesh(geometry, material);
     rock.position.set(x, y, z);
     rock.scale.set(scale, scale, scale);
+    rock.castShadow = true;
+    rock.receiveShadow = true;
     return rock;
 }
 
@@ -249,6 +278,8 @@ function createAnimatedSeaweed(x, z, totalHeight = 8, baseHeight = 2) {
     const baseGeometry = new THREE.CylinderGeometry(0.2, 0.2, baseHeight, 8, 1);
     const baseMesh = new THREE.Mesh(baseGeometry, seaweedMaterial);
     baseMesh.position.set(0, -18 + baseHeight / 2, 0);
+    baseMesh.castShadow = true;
+    baseMesh.receiveShadow = true;
     seaweedGroup.add(baseMesh);
     
     // Top (dynamic part)
@@ -257,7 +288,9 @@ function createAnimatedSeaweed(x, z, totalHeight = 8, baseHeight = 2) {
     const topMesh = new THREE.Mesh(topGeometry, seaweedMaterial);
     // Position the top mesh so its base is at the pivot origin
     topMesh.position.set(0, topHeight / 2, 0);
-    
+    topMesh.castShadow = true;  // Enable shadow casting for the top
+    topMesh.receiveShadow = true; // Enable receiving shadows for the top
+
     // Pivot for animating the top part
     const pivot = new THREE.Group();
     pivot.position.set(0, -18 + baseHeight, 0); // at the top of the base
@@ -295,6 +328,8 @@ function createShell(x, z, scale = 1) {
     const shell = new THREE.Mesh(geometry, material);
     shell.position.set(x, -18 + 0.25 * scale, z);
     shell.scale.set(scale, scale, scale);
+    shell.castShadow = true;
+    shell.receiveShadow = true;
     return shell;
 }
 
@@ -313,13 +348,6 @@ const seaweedCluster1 = createSeaweedCluster(5, 10, 4);
 const seaweedCluster2 = createSeaweedCluster(7, -8, -5);
 const seaweedCluster3 = createSeaweedCluster(6, 0, 12);
 scene.add(seaweedCluster1, seaweedCluster2, seaweedCluster3);
-
-seaweedCluster1.castShadow = true;
-seaweedCluster1.receiveShadow = true;
-seaweedCluster2.castShadow = true;
-seaweedCluster2.receiveShadow = true;
-seaweedCluster3.castShadow = true;
-seaweedCluster3.receiveShadow = true;
 
 // Shells
 const shells = [];
