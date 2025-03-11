@@ -81,8 +81,10 @@ scene.add(ambientLight);
 const fish = new THREE.Group();
 scene.add(fish);
 
-// Material
+// Material for fish
 const material = new THREE.MeshPhongMaterial({ color: 0xFF8C00, shininess: 40 }); //orange
+const eyeMaterial = new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 40 }); //orange
+const blackMaterial = new THREE.MeshPhongMaterial({ color: 0x000000, shininess: 40 }); //orange
 
 // Fish Head - More Rounded and Fish-Like
 const headGeometry = new THREE.SphereGeometry(1.2, 20, 16, 0, Math.PI * 2, 0, Math.PI/2); // 3/4 sphere for smooth transition
@@ -93,6 +95,21 @@ fishHead.position.set(0, 0, 2.5); // Pushed slightly into the body
 fishHead.castShadow = true;
 fishHead.receiveShadow = true;
 fish.add(fishHead);
+
+//fish eye
+const eyeShape = new THREE.CylinderGeometry(0.5,0.5,1.8,8);
+const fishEye = new THREE.Mesh(eyeShape, eyeMaterial);
+fishEye.rotation.x = Math.PI / 2;
+fishEye.rotation.z = Math.PI / 2;
+fishHead.add(fishEye);
+fishEye.position.set(0,2,0);
+
+const pupilShape = new THREE.CylinderGeometry(0.3,0.3,1.9,8);
+const fishPupil = new THREE.Mesh(pupilShape, blackMaterial);
+fishPupil.rotation.x = Math.PI / 2;
+fishPupil.rotation.z = Math.PI / 2;
+fishHead.add(fishPupil);
+fishPupil.position.set(0,2.1,0);
 
 // Fish Body - Ellipsoid Shape (With Clipped Front)
 const bodyGeometry = new THREE.SphereGeometry(1.2, 20, 16, 0, Math.PI * 2, 0, Math.PI/2); // Half-sphere
@@ -106,16 +123,66 @@ fishBody.receiveShadow = true;
 fish.add(fishBody);
 
 // Fish Tail - Fan-Like Shape
-const tailRadius = 1.2;
-const tailHeight = 2.5;
-const tailGeometry = new THREE.ConeGeometry(tailRadius, tailHeight, 6);
+const tailShape = new THREE.Shape();
+tailShape.moveTo(0, 0);
+tailShape.lineTo(3, -1.5); // Right side
+tailShape.lineTo(4, 0); // Top center
+tailShape.lineTo(3, 1.5); // Left side
+tailShape.lineTo(0, 0); // Back to start
+
+const extrudeSettings = {
+  depth: 0.2, // Makes it slightly 3D
+  bevelEnabled: false, // Keep it sharp-edged
+};
+
+const tailGeometry = new THREE.ExtrudeGeometry(tailShape, extrudeSettings);
 const fishTail = new THREE.Mesh(tailGeometry, material);
-fishTail.rotation.x = Math.PI / 2;
-fishTail.position.set(0, 0, -4);
-fishTail.castShadow = true;
-fishTail.receiveShadow = true;
+fishTail.rotation.y = Math.PI / 2; // Face the right direction
+fishTail.position.set(0,0,-3); // Attach it to the fish
+
 fish.add(fishTail);
 
+//fish fins
+
+const finLeft = new THREE.Mesh(tailGeometry, material);
+finLeft.rotation.x = Math.PI / 2;
+finLeft.rotation.y = 2 * Math.PI / 3;
+finLeft.rotation.z = Math.PI/4;
+finLeft.position.set(-1,0,0);
+fishBody.add(finLeft);
+
+const finRight = new THREE.Mesh(tailGeometry, material);
+finRight.rotation.x = Math.PI / 2;
+finRight.rotation.y = -2 * Math.PI / 3;
+finRight.rotation.z = -Math.PI/4;
+finRight.position.set(1,0,0);
+finRight.scale.x = -1; //flip to right side
+fishBody.add(finRight);
+
+// const tailRadius = 1.2;
+// const tailHeight = 2.5;
+// const tailGeometry = new THREE.ConeGeometry(tailRadius, tailHeight, 6);
+// const fishTail = new THREE.Mesh(tailGeometry, material);
+// fishTail.rotation.x = Math.PI / 2;
+// fishTail.position.set(0, 0, -4);
+// fishTail.castShadow = true;
+// fishTail.receiveShadow = true;
+// fish.add(fishTail);
+
+//top fin of fish
+const finShape = new THREE.Shape();
+finShape.moveTo(1, 0.8);
+finShape.lineTo(5, 0); // Right side
+finShape.lineTo(4.5, 1.5); // Top center
+finShape.lineTo(3.5, 2); // Left side
+finShape.lineTo(1, 0.8); // Back to start
+
+const finGeometry = new THREE.ExtrudeGeometry(finShape, extrudeSettings);
+const fishFin = new THREE.Mesh(finGeometry, material);
+fishFin.rotation.y = Math.PI / 2; // Face the right direction
+fishFin.position.set(0,1,2.5); // Attach it to the fish
+
+fish.add(fishFin);
 
 const aquariumWidth = 60;
 const aquariumHeight = 36;
@@ -568,6 +635,15 @@ function animate() {
 
     // Rotate the fish so its head faces the direction of movement
     fish.lookAt(nextPos);
+
+    //animate the tail
+    fishTail.rotation.z = Math.sin(time * 2) * 0.5;
+
+    //animate the head
+    fishHead.rotation.z = Math.sin(time * 4) * 0.3; 
+
+    //animate the body
+    //fishBody.rotation.z = Math.sin(time * 4) * 0.3; 
 
     [seaweedCluster1, seaweedCluster2, seaweedCluster3].forEach(cluster => {
         cluster.children.forEach(seaweed => {
