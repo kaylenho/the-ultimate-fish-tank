@@ -5,9 +5,36 @@
 		<title>Assignment3</title>
 		<style>
 			body { margin: 0; }
+			.overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        	}
+        	.btn {
+            display: block;
+            margin-bottom: 10px;
+            padding: 10px 20px;
+            background: #2f2f2f;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        	}
+			/* .btn:active{
+				background-color:rgb(255, 113, 18);
+			} */
+			.btn:hover{
+				background-color:rgb(255, 113, 18);
+				color:black;
+			}
 		</style>
 	</head>
 	<body>
+		<div class="overlay">
+		<button class="btn">Click me</button>
+		</div>
 		<script type="module" src="/main.js"></script>
 	</body>
 </html>

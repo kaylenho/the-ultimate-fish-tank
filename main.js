@@ -5,11 +5,20 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 5, 15);
+//camera.position.set(0, 5, 15);
+camera.position.set(0, 0, 150);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+
+//responsive screen size
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
 // Controls
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -19,21 +28,7 @@ controls.enableDamping = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 
-// Load the 360-degree panorama image
-// const bTextureLoader = new THREE.TextureLoader();
-// const texture = bTextureLoader.load('./assets/bedoom.jpeg');  // Path to your panoramic image
-
-// const Bgeometry = new THREE.SphereGeometry(100, 60, 40); // Large radius to cover the camera
-// const Bmaterial = new THREE.MeshBasicMaterial({
-//     map: texture,        // The panorama texture
-//     side: THREE.BackSide // Invert the sphere's normals to make the texture inside
-// });
-
-// // Create a mesh with the geometry and material
-// const sphere = new THREE.Mesh(Bgeometry, Bmaterial);
-// // Add the sphere to the scene (background)
-// scene.add(sphere);
-// Create a sphere geometry and apply the texture to it
+//background image
 const bTextureLoader = new THREE.TextureLoader();
  const texture = bTextureLoader.load('./assets/room1.jpeg');
 const Bgeometry = new THREE.SphereGeometry(150, 60, 40); // Large radius to cover the camera
@@ -48,17 +43,8 @@ sphere.position.set(0,15,0);
 // Add the sphere to the scene (background)
 scene.add(sphere);
 
-// backgroundTextureLoader.load(
-//     './assets/bedroom.jpg',  // Path to your image in the assets folder
-//     function (texture) {
-//         // Set the texture as the scene's background
-//         scene.background = texture;
-//     }
-// );
-// scene.background = new THREE.Color(0x000000);
-
 const light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(2,10,1);
+light.position.set(20,40,10);
 // light.target.position.set(0,-32,0);
 light.castShadow = true;
 light.shadow.mapSize.width = 2048;
@@ -167,6 +153,8 @@ const tailGeometry = new THREE.ExtrudeGeometry(tailShape, extrudeSettings);
 const fishTail = new THREE.Mesh(tailGeometry, material);
 fishTail.rotation.y = Math.PI / 2; // Face the right direction
 fishTail.position.set(0,0,-3); // Attach it to the fish
+fishTail.castShadow = true;
+fishTail.receiveShadow = true;
 
 fish.add(fishTail);
 
@@ -177,6 +165,8 @@ finLeft.rotation.x = Math.PI / 2;
 finLeft.rotation.y = 2 * Math.PI / 3;
 finLeft.rotation.z = Math.PI/4;
 finLeft.position.set(-1,0,0);
+finLeft.castShadow = true;
+finLeft.receiveShadow = true;
 fishBody.add(finLeft);
 
 const finRight = new THREE.Mesh(tailGeometry, material);
@@ -185,17 +175,9 @@ finRight.rotation.y = -2 * Math.PI / 3;
 finRight.rotation.z = -Math.PI/4;
 finRight.position.set(1,0,0);
 finRight.scale.x = -1; //flip to right side
+finRight.castShadow = true;
+finRight.receiveShadow = true;
 fishBody.add(finRight);
-
-// const tailRadius = 1.2;
-// const tailHeight = 2.5;
-// const tailGeometry = new THREE.ConeGeometry(tailRadius, tailHeight, 6);
-// const fishTail = new THREE.Mesh(tailGeometry, material);
-// fishTail.rotation.x = Math.PI / 2;
-// fishTail.position.set(0, 0, -4);
-// fishTail.castShadow = true;
-// fishTail.receiveShadow = true;
-// fish.add(fishTail);
 
 //top fin of fish
 const finShape = new THREE.Shape();
@@ -290,7 +272,7 @@ fishFoodTexture.wrapS = THREE.RepeatWrapping;
 fishFoodTexture.wrapT = THREE.RepeatWrapping;
 fishFoodTexture.repeat.set(3, 1); 
 
-const fishFoodMaterial = new THREE.MeshBasicMaterial({
+const fishFoodMaterial = new THREE.MeshStandardMaterial({
     map: fishFoodTexture 
 });
 
@@ -666,6 +648,70 @@ controls.addEventListener('change', () => {
 // }
 
 /////////////////////////
+//fish food animation (on click)
+
+const fishFoodStartPos = fishFood.position.clone();
+const fishFoodState = {
+    active: false,
+    timer: 0,
+    pelletsDropped: false
+}
+const pellets = [];
+
+function createPellet(){
+    const pelletGeometry = new THREE.SphereGeometry(0.5,8,8);
+    const pellet = new THREE.Mesh(pelletGeometry,material);
+    let randomX = (Math.random() - 0.5) * 2; // Generates a random value between -0.5 and 0.5
+    let randomY = (Math.random() - 0.5) * 2; // Generates a random value between -0.5 and 0.5
+
+    pellet.position.set(fishFood.position.x - 5 + randomX, fishFood.position.y + 1 + randomY, fishFood.position.z);
+    //pellet.position.set(fishFood.position.x - 5, fishFood.position.y + 1, fishFood.position.z);
+    scene.add(pellet);
+    pellet.castShadow = true;
+    pellet.receiveShadow = true;
+    pellets.push({mesh:pellet, dropped: false});
+}
+
+function feedFish(){
+    if(fishFoodState.active) return; //prevent multiple clicks
+    fishFoodState.active = true;
+    fishFoodState.timer = clock.getElapsedTime();
+    fishFoodState.pelletsDropped = false;
+
+        // Ensure fish food always starts from the same position
+        fishFood.position.copy(fishFoodStartPos);
+        fishFood.rotation.z = 0;
+    
+    console.log("fish is being fed");
+}
+
+function dropPellets(){
+    if(!fishFoodState.pelletsDropped){
+        fishFoodState.pelletsDropped = true;
+        console.log("pellets are dropping");
+        createPellet();
+        createPellet();
+        createPellet();
+    }
+}
+
+//use raycasting to detect mouse click on food
+window.addEventListener("click", function(event){
+    clickMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    clickMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(clickMouse, camera);
+
+    const intersects = raycaster.intersectObject(fishFood, true);
+
+    if(intersects.length > 0){
+        console.log("can is clicked");
+        feedFish();
+    }
+});
+
+
+/////////////////////////
 
 const clock = new THREE.Clock();
 
@@ -712,8 +758,62 @@ function animate() {
         });
     });
 
+    //animate fish food
+    const fishFoodTime = clock.getElapsedTime() - fishFoodState.timer;
+
+    if (fishFoodState.active) {
+        if (fishFoodTime < 0.5) {
+            let t = (fishFoodTime) / 0.5;
+            fishFood.position.y = fishFoodStartPos.y + 42 * t;
+            // Move up
+        } else if (fishFoodTime < 1.5) {
+            // Move left
+            let t = (fishFoodTime - 0.5) / 1; // Normalize from [0.5, 1.5] → [0, 1]
+            fishFood.position.x = fishFoodStartPos.x - 20 * t; // Move left
+        } else if (fishFoodTime < 2) {
+            // Gradually rotate to 45 degrees
+            console.log(fishFood.position.x);
+            let t = (fishFoodTime - 1.5) / 0.5; // Normalize time between 1.5 and 2
+            fishFood.rotation.z = t * (Math.PI / 4); // Linearly interpolate from 0 to 45 degrees
+        } else if (fishFoodTime < 2.5) {
+            // Gradually rotate back to 0 degrees
+            if (!fishFoodState.pelletsDropped) {
+                dropPellets(); 
+            }
+            let t = (fishFoodTime - 2) / 0.5; // Normalize time between 2 and 2.5
+            fishFood.rotation.z = (1 - t) * (Math.PI / 4); // Linearly interpolate from 45 degrees back to 0
+        } else if (fishFoodTime < 3.5) {
+            // Move right
+            fishFood.rotation.z = 0;
+            let t = (fishFoodTime - 2.5) / 1;
+            fishFood.position.x = fishFoodStartPos.x - 20 * (1-t);
+        } else if (fishFoodTime < 4) {
+            // Move down
+            let t = (fishFoodTime - 3.5) / 0.5;
+            fishFood.position.y = fishFoodStartPos.y + 42 * (1-t);
+        } else {
+            // Reset
+            fishFood.position.copy(fishFoodStartPos);
+            fishFood.rotation.z = 0;
+            fishFoodState.active = false;
+            fishFoodState.pelletsDropped = false;
+        }
+    }
+
+    pellets.forEach((pellet,index)=>{
+        pellet.mesh.position.y -= 1;
+        if(pellet.mesh.position.y < -16){
+            scene.remove(pellet.mesh);
+            pellets.splice(index,1);
+        }
+    })
+
     renderer.render(scene, camera);
 }
 
 animate();
 
+document.getElementsByTagName("button")[0].addEventListener('click',test);
+function test(){
+    console.log("button is clicked");
+}
