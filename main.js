@@ -487,6 +487,119 @@ edgeShells.push(createShell(27, 0, 1));
 edgeShells.push(createShell(-25, 5, 0.8));
 edgeShells.forEach(shell => scene.add(shell));
 
+
+
+const obstacles = [...rocks, ...shells, ...edgeRocks, ...edgeShells];
+
+// ------------------- Collision Detection ---------------
+// Helper function to compute a new lookAt target when near a wall
+
+
+
+let segmentStartTime = 0;
+let segmentStartPosition = fish.position.clone();
+let fishDirection = new THREE.Vector3(1, 0, 0).normalize();
+
+let targetDirection = fishDirection.clone();
+let turning = false;
+let turnStartTime = 0;
+const turnDuration = 1.0; // seconds for a smooth turn
+let oldDirection = fishDirection.clone();
+
+function computeCollisionTarget() {
+    const fishBox = new THREE.Box3().setFromObject(fish);
+    const fishSize = new THREE.Vector3();
+    fishBox.getSize(fishSize);
+    const halfWidth = aquariumWidth / 2;
+    const halfDepth = aquariumDepth / 2;
+    
+    let correction = new THREE.Vector3(0, 0, 0);
+    
+    // Check X-axis boundaries
+    if (fish.position.x + fishSize.x / 2 > halfWidth) {
+        correction.add(new THREE.Vector3(-1, 0, 0)); // too far right, push left
+    } else if (fish.position.x - fishSize.x / 2 < -halfWidth) {
+        correction.add(new THREE.Vector3(1, 0, 0)); // too far left, push right
+    }
+    
+    // Check Z-axis boundaries
+    if (fish.position.z + fishSize.z / 2 > halfDepth) {
+        correction.add(new THREE.Vector3(0, 0, -1)); // too far forward, push back
+    } else if (fish.position.z - fishSize.z / 2 < -halfDepth) {
+        correction.add(new THREE.Vector3(0, 0, 1)); // too far back, push forward
+    }
+    
+    if (correction.lengthSq() > 0) {
+        correction.normalize();
+        
+
+        const currentDir = new THREE.Vector3();
+        fish.getWorldDirection(currentDir);
+        
+        
+        const randomAngle = THREE.MathUtils.degToRad(THREE.MathUtils.randFloat(60, 120));
+        
+     
+        const rotationAxis = new THREE.Vector3().crossVectors(currentDir, correction).normalize();
+        
+      
+        const quat = new THREE.Quaternion().setFromAxisAngle(rotationAxis, randomAngle);
+        const newDir = currentDir.clone().applyQuaternion(quat).normalize();
+       
+        if (rotationAxis.length() < 0.001) {
+            newDir.copy(correction);
+        }
+        
+        // Return a target position by adding the new direction to the current fish position
+        return fish.position.clone().add(newDir);
+    }
+    return null;
+}
+function detectCollision() {
+    const fishBox = new THREE.Box3().setFromObject(fish);
+    const fishSize = new THREE.Vector3();
+    fishBox.getSize(fishSize);
+    const halfWidth = aquariumWidth / 2;
+    const halfDepth = aquariumDepth / 2;
+
+    let collision = false;
+    if (fish.position.x + fishSize.x / 2 > halfWidth ||
+        fish.position.x - fishSize.x / 2 < -halfWidth ||
+        fish.position.z + fishSize.z / 2 > halfDepth ||
+        fish.position.z - fishSize.z / 2 < -halfDepth) {
+        collision = true;
+    }
+
+    if (collision) {
+        // Check if fish is in a corner (i.e. near both X and Z boundaries)
+        if (
+            Math.abs(fish.position.x) + fishSize.x / 2 > halfWidth * 0.9 &&
+            Math.abs(fish.position.z) + fishSize.z / 2 > halfDepth * 0.9
+        ) {
+        
+            const centerDir = new THREE.Vector3(-fish.position.x, 0, -fish.position.z).normalize();
+
+            targetDirection = fishDirection.clone().lerp(centerDir, 0.7).normalize();
+        } else {
+           
+            const newTarget = computeCollisionTarget();
+            if (newTarget) {
+                targetDirection = newTarget.sub(fish.position).normalize();
+            }
+        }
+
+        // Start a smooth turn
+        oldDirection = fishDirection.clone();
+        turnStartTime = clock.getElapsedTime();
+        turning = true;
+
+        // Reset the movement segment so the fish's new direction is applied from its current position
+        segmentStartTime = clock.getElapsedTime();
+        segmentStartPosition = fish.position.clone();
+    }
+}
+
+
 //////////////////////// raycasting
 
 const loader = new GLTFLoader();
@@ -721,26 +834,48 @@ function animate() {
     dragObject(); //drag drop functionality
 
     const time = clock.getElapsedTime();
-    const radius = 15;
-    const dt = 0.01; // time for the look-ahead
+    const speed = 7; // Adjust this value as needed
+    const initialX = 0; // or wherever you want it to start
+
+    const segmentTime = time - segmentStartTime;
+
+    if (turning) {
+        const turnElapsed = time - turnStartTime;
+        const t = Math.min(turnElapsed / turnDuration, 1);
+        fishDirection = oldDirection.clone().lerp(targetDirection, t).normalize();
+        if (t >= 1) {
+            turning = false;
+        }
+    }
+
+    // Update the fish's position based on the current direction
+    fish.position.copy(segmentStartPosition.clone().add(fishDirection.clone().multiplyScalar(speed * segmentTime)));
 
     
-    const verticalAmplitude = 3; // How high/low the fish moves
-    const verticalSpeed = 2; // Speed of up and down movement
+    
 
-    // Update fish position along a circular path, moves up and down in Z sinusodal
-    fish.position.x = Math.sin(time) * radius;
-    fish.position.z = Math.cos(time) * radius;
-    fish.position.y = Math.sin(time * verticalSpeed) * verticalAmplitude;
 
-    const nextX = Math.sin(time + dt) * radius;
-    const nextZ = Math.cos(time + dt) * radius;
-    const nextY = Math.sin((time + dt) * verticalSpeed) * verticalAmplitude;
-    const nextPos = new THREE.Vector3(nextX, nextY, nextZ);
+    const fishBox = new THREE.Box3().setFromObject(fish);
+    const fishSize = new THREE.Vector3();
+    fishBox.getSize(fishSize);
+    const halfWidth = aquariumWidth / 2;
+    const halfDepth = aquariumDepth / 2;
 
-    // Rotate the fish so its head faces the direction of movement
-    fish.lookAt(nextPos);
+    fish.position.x = THREE.MathUtils.clamp(fish.position.x, -halfWidth + fishSize.x / 2, halfWidth - fishSize.x / 2);
+    fish.position.z = THREE.MathUtils.clamp(fish.position.z, -halfDepth + fishSize.z / 2, halfDepth - fishSize.z / 2);
 
+
+    // Update fish orientation to face in the direction of movement
+    fish.lookAt(fish.position.clone().add(fishDirection));
+
+    // fish.position.x = initialX + speed * time;
+
+    fish.position.y = -1;  
+    // fish.position.z = 0;  
+
+    // // Compute the next position for the fish's head orientation
+    // const nextPos = fish.position.clone().add(new THREE.Vector3(speed * time, 0, 0));
+    // fish.lookAt(nextPos);
     //animate the tail
     fishTail.rotation.z = Math.sin(time * 2) * 0.5;
 
@@ -757,6 +892,7 @@ function animate() {
             }
         });
     });
+    detectCollision();
 
     //animate fish food
     const fishFoodTime = clock.getElapsedTime() - fishFoodState.timer;
