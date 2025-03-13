@@ -20,11 +20,23 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 
 // Load the 360-degree panorama image
-const bTextureLoader = new THREE.TextureLoader();
-const texture = bTextureLoader.load('./assets/bedroom.jpg');  // Path to your panoramic image
+// const bTextureLoader = new THREE.TextureLoader();
+// const texture = bTextureLoader.load('./assets/bedoom.jpeg');  // Path to your panoramic image
 
+// const Bgeometry = new THREE.SphereGeometry(100, 60, 40); // Large radius to cover the camera
+// const Bmaterial = new THREE.MeshBasicMaterial({
+//     map: texture,        // The panorama texture
+//     side: THREE.BackSide // Invert the sphere's normals to make the texture inside
+// });
+
+// // Create a mesh with the geometry and material
+// const sphere = new THREE.Mesh(Bgeometry, Bmaterial);
+// // Add the sphere to the scene (background)
+// scene.add(sphere);
 // Create a sphere geometry and apply the texture to it
-const Bgeometry = new THREE.SphereGeometry(100, 60, 40); // Large radius to cover the camera
+const bTextureLoader = new THREE.TextureLoader();
+ const texture = bTextureLoader.load('./assets/room1.jpeg');
+const Bgeometry = new THREE.SphereGeometry(150, 60, 40); // Large radius to cover the camera
 const Bmaterial = new THREE.MeshBasicMaterial({
     map: texture,        // The panorama texture
     side: THREE.BackSide // Invert the sphere's normals to make the texture inside
@@ -32,7 +44,7 @@ const Bmaterial = new THREE.MeshBasicMaterial({
 
 // Create a mesh with the geometry and material
 const sphere = new THREE.Mesh(Bgeometry, Bmaterial);
-
+sphere.position.set(0,15,0);
 // Add the sphere to the scene (background)
 scene.add(sphere);
 
@@ -61,19 +73,35 @@ scene.add(light,lightHelper);
 const shadowHelper = new THREE.CameraHelper(light.shadow.camera);
 scene.add(shadowHelper);
 
-function createPointLight(x,y,z,color,intensity){
-    const pointLight = new THREE.PointLight(color,intensity,100);
-    pointLight.position.set(x,y,z);
-    const pointLightHelper = new THREE.PointLightHelper(pointLight);
-    pointLight.add(pointLightHelper);
-    return pointLight;
+// function createPointLight(x,y,z,color,intensity){
+//     const pointLight = new THREE.PointLight(color,intensity,100);
+//     pointLight.position.set(x,y,z);
+//     const pointLightHelper = new THREE.PointLightHelper(pointLight);
+//     pointLight.add(pointLightHelper);
+//     return pointLight;
+// }
+
+// const pointLights = [];
+// pointLights.push(createPointLight(0,8,5,0xFF2F94,100));
+// pointLights.forEach(pointLight => scene.add(pointLight));
+
+function createLEDLight(x, y, z, color, intensity) {
+    const light = new THREE.PointLight(color, intensity, 50, 2); // Add decay
+    light.position.set(x, y, z);
+    light.castShadow = true;
+    const helper = new THREE.PointLightHelper(light);
+    scene.add(light, helper);
+    return light;
 }
 
-const pointLights = [];
-pointLights.push(createPointLight(0,8,5,0x0096FF,100));
-pointLights.forEach(pointLight => scene.add(pointLight));
-
-
+// Add multiple LED-style lights
+const ledLights = [
+    createLEDLight(0, 10, 0, 0x00ffcc, 150), // Cyan
+    createLEDLight(25, 10, -15, 0x00ffcc, 130), // Pink
+    createLEDLight(-25, 10, -15, 0x00ffcc, 130), // Blue
+    createLEDLight(25, 10, 15, 0x00ffcc, 130),
+    createLEDLight(-25, 10, 15, 0x00ffcc, 130),
+];
 const ambientLight = new THREE.AmbientLight(0x780C96,0.1);
 scene.add(ambientLight);
 
@@ -255,13 +283,26 @@ sand.castShadow = true;
 sand.receiveShadow = true;
 
 //fish food
-const fishFoodGeometry = new THREE.CylinderGeometry(4,4,8,32,8);
-const fishFoodMaterial = new THREE.MeshPhongMaterial({color: 0xffffff});
-const fishFood = new THREE.Mesh(fishFoodGeometry,fishFoodMaterial);
-fishFood.position.set(35,-16,0);
+
+const fishFoodTexture = bTextureLoader.load('./assets/fishfood.png'); 
+
+fishFoodTexture.wrapS = THREE.RepeatWrapping;
+fishFoodTexture.wrapT = THREE.RepeatWrapping;
+fishFoodTexture.repeat.set(3, 1); 
+
+const fishFoodMaterial = new THREE.MeshBasicMaterial({
+    map: fishFoodTexture 
+});
+
+const fishFoodGeometry = new THREE.CylinderGeometry(4, 4, 8, 32, 8);
+const fishFood = new THREE.Mesh(fishFoodGeometry, fishFoodMaterial);
+fishFood.position.set(35, -16, 0);
 fishFood.castShadow = true;
 fishFood.receiveShadow = true;
+
 scene.add(fishFood);
+
+
 
 // Desk Geometry
 const deskGeometry = new THREE.BoxGeometry(90, 1, 60); // Wide and flat surface
@@ -328,7 +369,7 @@ const tileMaterial = new THREE.MeshStandardMaterial({
     roughness: 0.8, // Make it slightly glossy like tiles
 });
 
-const floorGeometry = new THREE.BoxGeometry(300, 2, 200); // Bigger floor
+const floorGeometry = new THREE.BoxGeometry(500, 2, 500); // Bigger floor
 const floor = new THREE.Mesh(floorGeometry, tileMaterial);
 floor.receiveShadow = true;
 
@@ -542,6 +583,24 @@ function dragObject(){
         }
     }
 }
+
+// Define the boundary radius inside the sphere
+const boundaryRadius = 250; // Slightly less than sphere's radius to prevent clipping
+
+controls.addEventListener('change', () => {
+    const cameraPosition = camera.position.clone();
+    const distanceFromCenter = cameraPosition.length();
+
+    // If the camera is beyond the boundary, push it back
+    if (distanceFromCenter > boundaryRadius) {
+        cameraPosition.setLength(boundaryRadius);
+        
+    }
+    if (cameraPosition.y < -40) {
+        cameraPosition.y = -40;
+    }
+    camera.position.copy(cameraPosition);
+});
 
 
 //Alternative method, click and hold to move objects
