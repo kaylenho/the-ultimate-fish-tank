@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { clamp } from 'three/src/math/MathUtils.js';
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -498,108 +499,198 @@ const obstacles = [...rocks, ...shells, ...edgeRocks, ...edgeShells];
 
 let segmentStartTime = 0;
 let segmentStartPosition = fish.position.clone();
-let fishDirection = new THREE.Vector3(1, 0, 0).normalize();
+let fishDirection = new THREE.Vector3(1, -0.1, 0).normalize();
 
 let targetDirection = fishDirection.clone();
 let turning = false;
 let turnStartTime = 0;
 const turnDuration = 1.0; // seconds for a smooth turn
 let oldDirection = fishDirection.clone();
-
 function computeCollisionTarget() {
     const fishBox = new THREE.Box3().setFromObject(fish);
     const fishSize = new THREE.Vector3();
     fishBox.getSize(fishSize);
     const halfWidth = aquariumWidth / 2;
     const halfDepth = aquariumDepth / 2;
+    // Compute aquarium vertical boundaries (assuming aquarium is centered at y = -2)
+    const aquariumTop = -2 + aquariumHeight / 2;
+    const aquariumBottom = -2 - aquariumHeight / 2;
     
+    // Build a correction vector based on which boundaries are exceeded.
+    // For side walls:
     let correction = new THREE.Vector3(0, 0, 0);
-    
-    // Check X-axis boundaries
     if (fish.position.x + fishSize.x / 2 > halfWidth) {
-        correction.add(new THREE.Vector3(-1, 0, 0)); // too far right, push left
+        correction.x = -1;
     } else if (fish.position.x - fishSize.x / 2 < -halfWidth) {
-        correction.add(new THREE.Vector3(1, 0, 0)); // too far left, push right
+        correction.x = 1;
     }
-    
-    // Check Z-axis boundaries
     if (fish.position.z + fishSize.z / 2 > halfDepth) {
-        correction.add(new THREE.Vector3(0, 0, -1)); // too far forward, push back
+        correction.z = -1;
     } else if (fish.position.z - fishSize.z / 2 < -halfDepth) {
-        correction.add(new THREE.Vector3(0, 0, 1)); // too far back, push forward
+        correction.z = 1;
+    }
+    // For vertical collisions:
+    if (fish.position.y + fishSize.y / 2 > aquariumTop) {
+         // Top collision – need a slight downward pitch.
+         correction.y = -1;
+    } else if (fish.position.y - fishSize.y / 2 < aquariumBottom) {
+         // Bottom collision – need a slight upward pitch.
+         correction.y = 1;
     }
     
     if (correction.lengthSq() > 0) {
-        correction.normalize();
-        
-
-        const currentDir = new THREE.Vector3();
-        fish.getWorldDirection(currentDir);
-        
-        
-        const randomAngle = THREE.MathUtils.degToRad(THREE.MathUtils.randFloat(60, 120));
-        
-     
-        const rotationAxis = new THREE.Vector3().crossVectors(currentDir, correction).normalize();
-        
-      
-        const quat = new THREE.Quaternion().setFromAxisAngle(rotationAxis, randomAngle);
-        const newDir = currentDir.clone().applyQuaternion(quat).normalize();
+       // Determine if the collision involves a side wall and add random vertical movement
+       const sideCollision = (Math.abs(correction.x) > 0.001 || Math.abs(correction.z) > 0.001);
+       const verticalCollision = (Math.abs(correction.y) > 0.001);
        
-        if (rotationAxis.length() < 0.001) {
-            newDir.copy(correction);
-        }
+       
+       if (sideCollision) {
+           
+           let horizontalDir = new THREE.Vector3(fishDirection.x, 0, fishDirection.z).normalize();
+         
+           let randomAngle = THREE.MathUtils.degToRad(THREE.MathUtils.randFloat(60, 120));
+           let quat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), randomAngle);
+           let newHorizontalDir = horizontalDir.clone().applyQuaternion(quat).normalize();
+           
+           
+           let verticalDelta = THREE.MathUtils.degToRad(THREE.MathUtils.randFloatSpread(5));
+           newHorizontalDir.y = THREE.MathUtils.clamp(fishDirection.y + verticalDelta, fishDirection.y - verticalDelta, fishDirection.y + verticalDelta);
+           newHorizontalDir.normalize();
+           return fish.position.clone().add(newHorizontalDir);
+       } 
+      
+       else if (verticalCollision) {
         
-        // Return a target position by adding the new direction to the current fish position
-        return fish.position.clone().add(newDir);
+           const currentDir = new THREE.Vector3();
+           fish.getWorldDirection(currentDir);
+           let randomAngle = THREE.MathUtils.degToRad(THREE.MathUtils.randFloat(5, 15));
+           const rotationAxis = new THREE.Vector3().crossVectors(currentDir, new THREE.Vector3(0, correction.y, 0)).normalize();
+           const quat = new THREE.Quaternion().setFromAxisAngle(rotationAxis, randomAngle);
+           let newDir = currentDir.clone().applyQuaternion(quat).normalize();
+           return fish.position.clone().add(newDir);
+       }
     }
     return null;
 }
+
 function detectCollision() {
     const fishBox = new THREE.Box3().setFromObject(fish);
     const fishSize = new THREE.Vector3();
     fishBox.getSize(fishSize);
     const halfWidth = aquariumWidth / 2;
     const halfDepth = aquariumDepth / 2;
+    const aquariumTop = -2 + aquariumHeight / 2;
+    const aquariumBottom = -2 - aquariumHeight / 2;
 
     let collision = false;
     if (fish.position.x + fishSize.x / 2 > halfWidth ||
         fish.position.x - fishSize.x / 2 < -halfWidth ||
         fish.position.z + fishSize.z / 2 > halfDepth ||
-        fish.position.z - fishSize.z / 2 < -halfDepth) {
+        fish.position.z - fishSize.z / 2 < -halfDepth ||
+        fish.position.y + fishSize.y / 2 > aquariumTop ||
+        fish.position.y - fishSize.y / 2 < aquariumBottom) {
         collision = true;
     }
 
     if (collision) {
-        // Check if fish is in a corner (i.e. near both X and Z boundaries)
-        if (
-            Math.abs(fish.position.x) + fishSize.x / 2 > halfWidth * 0.9 &&
-            Math.abs(fish.position.z) + fishSize.z / 2 > halfDepth * 0.9
-        ) {
-        
-            const centerDir = new THREE.Vector3(-fish.position.x, 0, -fish.position.z).normalize();
-
-            targetDirection = fishDirection.clone().lerp(centerDir, 0.7).normalize();
-        } else {
-           
-            const newTarget = computeCollisionTarget();
-            if (newTarget) {
-                targetDirection = newTarget.sub(fish.position).normalize();
+        const newTarget = computeCollisionTarget();
+        if (newTarget) {
+            targetDirection = newTarget.sub(fish.position).normalize();
+            // If hitting the top, force a slight downward pitch.
+            if (fish.position.y + fishSize.y / 2 > aquariumTop) {
+                targetDirection.y = -0.05;
+                targetDirection.normalize();
+            } else if (fish.position.y - fishSize.y / 2 < aquariumBottom) {
+                // If hitting the bottom, force a slight upward pitch.
+                targetDirection.y = 0.05;
+                targetDirection.normalize();
             }
         }
-
-        // Start a smooth turn
         oldDirection = fishDirection.clone();
         turnStartTime = clock.getElapsedTime();
         turning = true;
-
-        // Reset the movement segment so the fish's new direction is applied from its current position
         segmentStartTime = clock.getElapsedTime();
         segmentStartPosition = fish.position.clone();
     }
 }
 
+// function clampObstacleCollisions() {
+//     // Get the fish head's world position.
+//     const headPos = new THREE.Vector3();
+//     fishHead.getWorldPosition(headPos);
+  
+//     obstacles.forEach(obstacle => {
+//       const obsBox = new THREE.Box3().setFromObject(obstacle);
+//       // Check if the fish head is inside the obstacle.
+//       if (obsBox.containsPoint(headPos)) {
+//         // Compute distances to each face.
+//         const dxMin = headPos.x - obsBox.min.x;
+//         const dxMax = obsBox.max.x - headPos.x;
+//         const dyMin = headPos.y - obsBox.min.y;
+//         const dyMax = obsBox.max.y - headPos.y;
+//         const dzMin = headPos.z - obsBox.min.z;
+//         const dzMax = obsBox.max.z - headPos.z;
+  
+//         // Find the smallest overlap.
+//         const minOverlap = Math.min(dxMin, dxMax, dyMin, dyMax, dzMin, dzMax);
+  
+//         // Create a delta vector (initialized to zero).
+//         const delta = new THREE.Vector3(0, 0, 0);
+  
+//         // Adjust along the axis with the minimum overlap.
+//         if (minOverlap === dxMin) {
+//           delta.x = obsBox.min.x - headPos.x;
+//         } else if (minOverlap === dxMax) {
+//           delta.x = obsBox.max.x - headPos.x;
+//         } else if (minOverlap === dyMin) {
+//           delta.y = obsBox.min.y - headPos.y;
+//         } else if (minOverlap === dyMax) {
+//           delta.y = obsBox.max.y - headPos.y;
+//         } else if (minOverlap === dzMin) {
+//           delta.z = obsBox.min.z - headPos.z;
+//         } else if (minOverlap === dzMax) {
+//           delta.z = obsBox.max.z - headPos.z;
+//         }
+//         // Now, adjust the fish group's position so that the head moves by delta.
+//         // (Since fishHead is a child of fish, moving fish will shift head accordingly.)
+//         fish.position.add(delta);
+  
+//         // Update the headPos for this obstacle if needed.
+//         fishHead.getWorldPosition(headPos);
+//       }
+//     });
+//   }
 
+    
+//     const fishBox = new THREE.Box3().setFromObject(fish);
+    
+   
+//     obstacles.forEach(obstacle => {
+
+//       const obstacleBox = new THREE.Box3().setFromObject(obstacle);
+//       if (fishBox.intersectsBox(obstacleBox)) {
+       
+//         const obstacleCenter = new THREE.Vector3();
+//         obstacleBox.getCenter(obstacleCenter);
+        
+       
+//         const repulsion = fish.position.clone().sub(obstacleCenter).normalize();
+        
+      
+//         targetDirection = fishDirection.clone().lerp(repulsion, 0.2).normalize();
+        
+        
+//         fish.position.add(repulsion.multiplyScalar(1)); 
+        
+
+//         oldDirection = fishDirection.clone();
+//         turnStartTime = clock.getElapsedTime();
+//         turning = true;
+//         segmentStartTime = clock.getElapsedTime();
+//         segmentStartPosition = fish.position.clone();
+//       }
+//     });
+//   }
 //////////////////////// raycasting
 
 const loader = new GLTFLoader();
@@ -621,6 +712,7 @@ loader.load('./assets/coral.glb', function (gltf) {
         }
     });
     scene.add(coral);
+    obstacles.push(coral);
 });
 
 
@@ -860,9 +952,12 @@ function animate() {
     fishBox.getSize(fishSize);
     const halfWidth = aquariumWidth / 2;
     const halfDepth = aquariumDepth / 2;
+    const aquariumTop = -2 + aquariumHeight / 2;
+    const aquariumBottom = -2 - aquariumHeight / 2;
 
     fish.position.x = THREE.MathUtils.clamp(fish.position.x, -halfWidth + fishSize.x / 2, halfWidth - fishSize.x / 2);
     fish.position.z = THREE.MathUtils.clamp(fish.position.z, -halfDepth + fishSize.z / 2, halfDepth - fishSize.z / 2);
+    fish.position.y = THREE.MathUtils.clamp(fish.position.y, aquariumBottom + fishSize.y / 2, aquariumTop - fishSize.y / 2);
 
 
     // Update fish orientation to face in the direction of movement
@@ -870,7 +965,7 @@ function animate() {
 
     // fish.position.x = initialX + speed * time;
 
-    fish.position.y = -1;  
+    
     // fish.position.z = 0;  
 
     // // Compute the next position for the fish's head orientation
@@ -893,6 +988,7 @@ function animate() {
         });
     });
     detectCollision();
+    // clampObstacleCollisions();
 
     //animate fish food
     const fishFoodTime = clock.getElapsedTime() - fishFoodState.timer;
