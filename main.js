@@ -54,11 +54,11 @@ light.shadow.camera.left = -70;
 light.shadow.camera.bottom = -70;
 light.shadow.camera.right = 70;
 light.shadow.camera.top = 70;
-const lightHelper = new THREE.DirectionalLightHelper(light,3);
-scene.add(light,lightHelper);
+//const lightHelper = new THREE.DirectionalLightHelper(light,3);
+scene.add(light);
 
-const shadowHelper = new THREE.CameraHelper(light.shadow.camera);
-scene.add(shadowHelper);
+//const shadowHelper = new THREE.CameraHelper(light.shadow.camera);
+// scene.add(shadowHelper);
 
 // function createPointLight(x,y,z,color,intensity){
 //     const pointLight = new THREE.PointLight(color,intensity,100);
@@ -76,8 +76,8 @@ function createLEDLight(x, y, z, color, intensity) {
     const light = new THREE.PointLight(color, intensity, 50, 2); // Add decay
     light.position.set(x, y, z);
     light.castShadow = true;
-    const helper = new THREE.PointLightHelper(light);
-    scene.add(light, helper);
+    //const helper = new THREE.PointLightHelper(light);
+    scene.add(light);
     return light;
 }
 
@@ -89,7 +89,7 @@ const ledLights = [
     createLEDLight(25, 10, 15, 0x00ffcc, 130),
     createLEDLight(-25, 10, 15, 0x00ffcc, 130),
 ];
-const ambientLight = new THREE.AmbientLight(0x780C96,0.1);
+const ambientLight = new THREE.AmbientLight(0xefc070,0.15);
 scene.add(ambientLight);
 
 // Create Fish Group
@@ -662,6 +662,7 @@ const mouse = new THREE.Vector2(); // Declare the mouse vector
 
 // Load the coral model
 loader.load('./assets/coral.glb', function (gltf) {
+    console.log(gltf.scene); // Check if the model is loaded
     const coral = gltf.scene;
     coral.scale.set(1, 1, 1); // Adjust scale if needed
     coral.position.set(-16, -18, 0); // Adjust position inside the aquarium
@@ -672,10 +673,32 @@ loader.load('./assets/coral.glb', function (gltf) {
             child.userData.draggable = true;
             child.userData.name = "coral";
             child.castShadow = true;
+            child.receiveShadow = true;
         }
     });
     scene.add(coral);
     obstacles.push(coral);
+});
+
+// Load the coral model
+const yellowLoader = new GLTFLoader();
+
+yellowLoader.load('./assets/coral_yellow.glb', function (gltf) {
+    const yellowCoral = gltf.scene;
+    yellowCoral.scale.set(50, 50, 50); // Adjust scale if needed
+    yellowCoral.position.set(20, -18, 0); // Adjust position inside the aquarium
+
+    // Ensure all child meshes are draggable
+    yellowCoral.traverse((child) => {
+        if (child.isMesh) {
+            child.userData.draggable = true;
+            child.userData.name = "coral_yellow";
+            child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    });
+    scene.add(yellowCoral);
+    obstacles.push(yellowCoral);
 });
 
 
@@ -864,11 +887,14 @@ function dropPellets(){
 }
 
 //use raycasting to detect mouse click on food
-window.addEventListener("click", function(event){
-    clickMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    clickMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    raycaster.setFromCamera(clickMouse, camera);
+const clickMouseFood = new THREE.Vector2();
+
+window.addEventListener("click", function(event){
+    clickMouseFood.x = (event.clientX / window.innerWidth) * 2 - 1;
+    clickMouseFood.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(clickMouseFood, camera);
 
     const intersects = raycaster.intersectObject(fishFood, true);
 
@@ -1024,7 +1050,7 @@ function animate() {
 
 animate();
 
-document.getElementsByTagName("button")[0].addEventListener('click',test);
-function test(){
-    console.log("button is clicked");
-}
+// document.getElementsByTagName("button")[0].addEventListener('click',test);
+// function test(){
+//     console.log("button is clicked");
+// }
